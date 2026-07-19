@@ -1,11 +1,19 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import Navbar from '@/components/Navbar'
 import ApiConfigTab from './components/ApiConfigTab'
+import BillingTab from './components/BillingTab'
 import { AppIcon } from '@/components/ui/icons'
 import { useRouter } from '@/i18n/navigation'
+import { apiFetch } from '@/lib/api-fetch'
+
+interface BalanceInfo {
+  balance: number
+  frozenAmount: number
+  totalSpent: number
+}
 
 export default function ProfilePage() {
   const { data: session, status } = useSession()
@@ -15,11 +23,35 @@ export default function ProfilePage() {
 
   // 主要分区：扣费记录 / API配置
   const [activeSection, setActiveSection] = useState<'billing' | 'apiConfig'>('apiConfig')
+  const [balance, setBalance] = useState<BalanceInfo | null>(null)
+
+  // 获取余额
+  const fetchBalance = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/user/balance')
+      if (res.ok) {
+        const data = await res.json()
+        setBalance({
+          balance: data.balance,
+          frozenAmount: data.frozenAmount,
+          totalSpent: data.totalSpent,
+        })
+      }
+    } catch {
+      // 静默处理
+    }
+  }, [])
 
   useEffect(() => {
     if (status === 'loading') return
     if (!session) { router.push({ pathname: '/auth/signin' }); return }
   }, [router, session, status])
+
+  useEffect(() => {
+    if (session) {
+      void fetchBalance()
+    }
+  }, [session, fetchBalance])
 
   if (status === 'loading' || !session) {
     return (
@@ -28,8 +60,6 @@ export default function ProfilePage() {
       </div>
     )
   }
-
-  const noBillingText = t('openSourceNoBilling')
 
   return (
     <div className="glass-page min-h-screen">
@@ -52,7 +82,13 @@ export default function ProfilePage() {
                 {/* 余额卡片 */}
                 <div className="glass-surface-soft rounded-2xl border border-[var(--glass-stroke-base)] p-4">
                   <div className="text-xs font-medium text-[var(--glass-text-secondary)]">{t('availableBalance')}</div>
-                  <div className="mt-2 text-base font-semibold text-[var(--glass-text-primary)]">{noBillingText}</div>
+                  <div className="mt-2 text-xl font-bold text-[var(--glass-text-primary)]">
+                    ¥{(balance?.balance ?? 0).toFixed(2)}
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 text-xs text-[var(--glass-text-tertiary)]">
+                    <span>{t('frozen')}: ¥{(balance?.frozenAmount ?? 0).toFixed(2)}</span>
+                    <span>{t('totalSpent')}: ¥{(balance?.totalSpent ?? 0).toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -94,14 +130,10 @@ export default function ProfilePage() {
           {/* 右侧内容区 */}
           <div className="flex-1 min-w-0">
             <div className="glass-surface-elevated h-full flex flex-col">
-
               {activeSection === 'apiConfig' ? (
                 <ApiConfigTab />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                  <AppIcon name="receipt" className="mb-4 h-12 w-12 text-[var(--glass-text-tertiary)]" />
-                  <p className="text-base font-semibold text-[var(--glass-text-primary)]">{noBillingText}</p>
-                </div>
+                <BillingTab />
               )}
             </div>
           </div>

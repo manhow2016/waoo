@@ -52,9 +52,6 @@ export default function SignIn() {
               <h1 className='text-3xl font-bold text-[var(--glass-text-primary)] mb-2'>
                 {t('welcomeBack')}
               </h1>
-              <p className='text-[var(--glass-text-secondary)]'>
-                {t('loginTo')}
-              </p>
             </div>
 
             <form onSubmit={handleSubmit} className='space-y-6'>
@@ -117,7 +114,7 @@ export default function SignIn() {
               <p className='text-[var(--glass-text-secondary)]'>
                 {t('noAccount')}{' '}
                 <Link
-                  href={{ pathname: '/auth/signin' }}
+                  href={{ pathname: '/auth/signup' }}
                   className='text-[var(--glass-tone-info-fg)] hover:underline font-medium'
                 >
                   {t('signupNow')}

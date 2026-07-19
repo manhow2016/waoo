@@ -4,6 +4,7 @@ import { logAuthAction } from '@/lib/logging/semantic'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 import { checkRateLimit, getClientIp, AUTH_REGISTER_LIMIT } from '@/lib/rate-limit'
+import { verifyCaptcha } from '@/lib/captcha'
 
 /**
  * 验证邮箱格式
@@ -11,38 +12,6 @@ import { checkRateLimit, getClientIp, AUTH_REGISTER_LIMIT } from '@/lib/rate-lim
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
-}
-
-/**
- * 验证 Cloudflare Turnstile 验证码
- */
-async function verifyTurnstileToken(token: string): Promise<boolean> {
-  const secretKey = process.env.TURNSTILE_SECRET_KEY
-  
-  // 如果没有配置密钥，跳过验证（开发环境）
-  if (!secretKey) {
-    console.warn('TURNSTILE_SECRET_KEY not configured, skipping captcha verification')
-    return true
-  }
-
-  try {
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        secret: secretKey,
-        response: token,
-      }),
-    })
-
-    const data = await response.json()
-    return data.success === true
-  } catch (error) {
-    console.error('Turnstile verification failed:', error)
-    return false
-  }
 }
 
 export const POST = apiHandler(async (request: NextRequest) => {
@@ -61,7 +30,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   }
 
   const body = await request.json()
-  const { email, password, turnstileToken } = body
+  const { email, password, captchaSessionId, captchaCode } = body
 
   // 验证输入
   if (!email || !password) {
@@ -87,20 +56,20 @@ export const POST = apiHandler(async (request: NextRequest) => {
     )
   }
 
-  // 验证 Turnstile 人机验证
-  if (!turnstileToken) {
-    logAuthAction('REGISTER', email, { error: 'Missing captcha token' })
+  // 验证图片验证码
+  if (!captchaSessionId || !captchaCode) {
+    logAuthAction('REGISTER', email, { error: 'Missing captcha' })
     return NextResponse.json(
-      { success: false, message: '请完成人机验证' },
+      { success: false, message: '请输入验证码' },
       { status: 400 }
     )
   }
 
-  const captchaValid = await verifyTurnstileToken(turnstileToken)
+  const captchaValid = await verifyCaptcha(captchaSessionId, captchaCode)
   if (!captchaValid) {
     logAuthAction('REGISTER', email, { error: 'Captcha verification failed' })
     return NextResponse.json(
-      { success: false, message: '人机验证失败，请重试' },
+      { success: false, message: '验证码错误，请重试' },
       { status: 400 }
     )
   }

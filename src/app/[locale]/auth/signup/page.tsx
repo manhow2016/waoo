@@ -1,25 +1,49 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useTranslations } from 'next-intl'
 import Navbar from "@/components/Navbar"
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator"
-import Turnstile from "@/components/auth/Turnstile"
 import { apiFetch } from '@/lib/api-fetch'
 import { Link, useRouter } from '@/i18n/navigation'
+import { AppIcon } from '@/components/ui/icons'
 
 export default function SignUp() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [turnstileToken, setTurnstileToken] = useState("")
+  const [captchaCode, setCaptchaCode] = useState("")
+  const [captchaSessionId, setCaptchaSessionId] = useState("")
+  const [captchaImage, setCaptchaImage] = useState("")
+  const [captchaLoading, setCaptchaLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
   const t = useTranslations('auth')
 
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''
+  // 获取验证码
+  const fetchCaptcha = useCallback(async () => {
+    setCaptchaLoading(true)
+    try {
+      const response = await apiFetch('/api/auth/captcha')
+      if (response.ok) {
+        const data = await response.json()
+        setCaptchaImage(data.image)
+        setCaptchaSessionId(data.sessionId)
+        setCaptchaCode("")
+      }
+    } catch {
+      // 静默处理
+    } finally {
+      setCaptchaLoading(false)
+    }
+  }, [])
+
+  // 初始加载验证码
+  useEffect(() => {
+    void fetchCaptcha()
+  }, [fetchCaptcha])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,7 +63,7 @@ export default function SignUp() {
       return
     }
 
-    if (!turnstileToken) {
+    if (!captchaCode) {
       setError(t('captchaRequired'))
       setLoading(false)
       return
@@ -54,7 +78,8 @@ export default function SignUp() {
         body: JSON.stringify({
           email,
           password,
-          turnstileToken,
+          captchaSessionId,
+          captchaCode,
         }),
       })
 
@@ -67,6 +92,10 @@ export default function SignUp() {
         }, 2000)
       } else {
         setError(data.message || t('signupFailed'))
+        // 验证码错误时刷新验证码
+        if (data.message?.includes('验证码')) {
+          void fetchCaptcha()
+        }
       }
     } catch {
       setError(t('signupError'))
@@ -141,19 +170,47 @@ export default function SignUp() {
                 />
               </div>
 
-              {turnstileSiteKey && (
-                <div>
-                  <label className="glass-field-label block mb-2">
-                    {t('captcha')}
-                  </label>
-                  <Turnstile
-                    siteKey={turnstileSiteKey}
-                    onVerify={setTurnstileToken}
-                    onExpire={() => setTurnstileToken("")}
-                    onError={() => setTurnstileToken("")}
+              <div>
+                <label className="glass-field-label block mb-2">
+                  {t('captcha')}
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={captchaCode}
+                    onChange={(e) => setCaptchaCode(e.target.value)}
+                    required
+                    maxLength={4}
+                    className="glass-input-base flex-1 px-4 py-3 uppercase"
+                    placeholder={t('captchaPlaceholder')}
                   />
+                  <div 
+                    className="relative cursor-pointer flex-shrink-0"
+                    onClick={() => !captchaLoading && fetchCaptcha()}
+                    title={t('captchaRefresh')}
+                  >
+                    {captchaImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
+                        src={captchaImage} 
+                        alt={t('captcha')}
+                        className="h-[46px] rounded-lg border border-[var(--glass-stroke-base)]"
+                      />
+                    ) : (
+                      <div className="h-[46px] w-[120px] rounded-lg border border-[var(--glass-stroke-base)] flex items-center justify-center bg-[var(--glass-bg-muted)]">
+                        {captchaLoading ? (
+                          <AppIcon name="loader" className="w-5 h-5 animate-spin text-[var(--glass-text-tertiary)]" />
+                        ) : (
+                          <span className="text-xs text-[var(--glass-text-tertiary)]">{t('captchaLoading')}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+                <p className="text-xs text-[var(--glass-text-tertiary)] mt-1">
+                  {t('captchaHint')}
+                </p>
+              </div>
 
               {error && (
                 <div className="bg-[var(--glass-tone-danger-bg)] border border-[color:color-mix(in_srgb,var(--glass-tone-danger-fg)_22%,transparent)] text-[var(--glass-tone-danger-fg)] px-4 py-3 rounded-lg text-sm">

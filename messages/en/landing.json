@@ -1,0 +1,64 @@
+{
+  "title": "waoowaoo",
+  "subtitle": "AI Film & TV Studio",
+  "enterWorkspace": "Enter Workspace",
+  "loading": "Loading...",
+  "getStarted": "Get Started",
+  "learnMore": "Learn More",
+  "hero": {
+    "badge": "Full-Pipeline AI Film Creation Platform",
+    "title": "AI · Film Creation ·",
+    "titleHighlight": "Infinite Creativity",
+    "subtitle": "Redefining AI short drama industrial productivity. An all-in-one, full-pipeline AI filmmaking solution.",
+    "cta": "Start Creating Now",
+    "explore": "Explore Features",
+    "scrollDown": "Scroll to Explore"
+  },
+  "platform": {
+    "title": "AI Comic & Drama Creation Platform",
+    "subtitle": "AI-powered full pipeline — from a single idea to monetized content"
+  },
+  "canvas": {
+    "title": "waoowaoo Canvas",
+    "subtitle": "An all-in-one creative space combining multi-model capabilities, intelligent creation assistants, and visual workflows",
+    "textGen": "Text Generation",
+    "textGenContent": "A breathtaking Eastern fairy clad in a white-blue gradient sheer Hanfu robe, adorned with silver-white floral embroidery. Her hair cascades like a waterfall, decorated with a white jade flower hairpin and pearl earrings. She stands quietly on an immortal palace plaza floating above a sea of clouds. Behind her towers a magnificent white jade celestial gate with intricately carved flying eaves and dougong brackets. In the distance, layered floating immortal mountains pierce through the clouds, with waterfalls cascading from their peaks. Mist swirls around the mountainsides while pink-white cherry blossoms bloom on both sides of the courtyard, petals drifting gently in the breeze. Lotus ponds and white jade railings surround the plaza as dawn sunlight filters through the clouds, casting soft volumetric light — the entire scene is ethereal, sacred, and dreamlike.",
+    "characterGen": "Image Generation - Character",
+    "sceneGen": "Scene",
+    "videoGen": "Video Generation",
+    "videoContent": "The camera slowly pushes forward from a wide shot. The fairy gently turns her head toward the camera, a faint smile appearing on her lips. A gentle breeze flows, her sleeves, ribbons, and long hair moving naturally. Cherry blossom petals dance lightly in the air while mist drifts slowly. The distant waterfall continues to flow as sunlight creates soft highlights on the white jade architecture. The camera finally settles on a medium close-up of the character — cinematic camera movement, natural and fluid motion, realistic fabric simulation, real hair physics, ultra-high detail, hyper-realistic Eastern xianxia style.",
+    "tryNow": "Try Now"
+  },
+  "footer": {
+    "description": "An all-in-one, full-pipeline AI film creation platform — bringing your creativity to life efficiently.",
+    "product": "Product",
+    "aiImage": "AI Image",
+    "aiVideo": "AI Video",
+    "canvas": "waoowaoo Canvas",
+    "help": "Help",
+    "tutorial": "Tutorial",
+    "faq": "FAQ",
+    "contactUs": "Contact Us",
+    "about": "About",
+    "aboutUs": "About Us",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "copyright": "© 2026 waoowaoo. All rights reserved."
+  },
+  "features": {
+    "title": "Unleash Infinite Creativity",
+    "subtitle": "Full-process AI assistance, from script to final cut",
+    "character": {
+      "title": "Character Workshop",
+      "description": "Create unique anime characters with high consistency"
+    },
+    "storyboard": {
+      "title": "Smart Storyboard",
+      "description": "One-click text to storyboard, precise narrative control"
+    },
+    "world": {
+      "title": "World Building",
+      "description": "Immersive scene generation to build grand story backgrounds"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "title": "waoowaoo",
+  "subtitle": "AI影视Studio",
+  "enterWorkspace": "进入工作区",
+  "loading": "加载中...",
+  "getStarted": "立即体验",
+  "learnMore": "了解更多",
+  "hero": {
+    "badge": "全链路 AI 影视创作平台",
+    "title": "AI · 影视创作 ·",
+    "titleHighlight": "创意无限",
+    "subtitle": "重新定义 AI 短剧工业化生产力，一站式全链路 AI 影视制作解决方案",
+    "cta": "立即开始创作",
+    "explore": "查看功能",
+    "scrollDown": "向下探索"
+  },
+  "platform": {
+    "title": "AI漫剧创作与发行一站式平台",
+    "subtitle": "AI驱动全链路流程，从一个灵感到作品变现"
+  },
+  "canvas": {
+    "title": "waoowaoo 画布",
+    "subtitle": "集多模型能力、智能化创作助手、可视化创作流程于一体的一站式创意空间",
+    "textGen": "文本生成",
+    "textGenContent": "一位绝美东方仙子，身穿白蓝渐变轻纱汉服，银白色花卉刺绣点缀，长发如瀑，佩戴白玉花簪与珍珠耳饰，静静站立于一座漂浮于云海之上的仙宫广场。背景是一座宏伟的白玉天门，飞檐斗拱雕刻精美，远处层叠浮空仙山直入云霄，瀑布自山巅倾泻而下，云雾缭绕于山间，粉白樱花盛开于庭院两侧，花瓣随风缓缓飘落，莲池与白玉栏杆环绕广场，晨曦阳光穿透云层洒下柔和体积光，整个场景空灵、神圣、梦幻。",
+    "characterGen": "图像生成-人物",
+    "sceneGen": "场景图",
+    "videoGen": "视频生成",
+    "videoContent": "镜头由远景缓慢向前推进，仙子缓缓转头望向镜头，嘴角露出淡淡微笑，微风轻拂，衣袖、飘带与长发自然飘动，樱花花瓣轻轻飞舞，云雾缓慢流动，远处瀑布持续流淌，阳光在白玉建筑表面形成柔和高光，镜头最后停留在人物半身特写，电影级运镜，动作自然流畅，真实布料模拟，真实头发物理效果，超高细节，超写实东方仙侠风格。",
+    "tryNow": "立即体验"
+  },
+  "footer": {
+    "description": "一站式全链路AI影视创作平台，助力创意高效落地。",
+    "product": "产品",
+    "aiImage": "AI生图",
+    "aiVideo": "AI生视频",
+    "canvas": "waoowaoo 画布",
+    "help": "帮助",
+    "tutorial": "使用教程",
+    "faq": "常见问题",
+    "contactUs": "联系我们",
+    "about": "关于",
+    "aboutUs": "关于我们",
+    "terms": "用户协议",
+    "privacy": "隐私政策",
+    "copyright": "© 2026 waoowaoo 版权所有"
+  },
+  "features": {
+    "title": "释放无限创造力",
+    "subtitle": "全流程 AI 辅助，从剧本到成片",
+    "character": {
+      "title": "角色工坊",
+      "description": "打造独一无二的动漫角色，保持高度一致性"
+    },
+    "storyboard": {
+      "title": "智能分镜",
+      "description": "文字一键转分镜，精准把控叙事节奏"
+    },
+    "world": {
+      "title": "世界构建",
+      "description": "沉浸式场景生成，构建宏大的故事背景"
+    }
+  }
+}

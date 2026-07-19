@@ -27,7 +27,7 @@ export const authOptions: any = {
 
         const user = await prisma.user.findUnique({
           where: {
-            name: credentials.username
+            email: credentials.username
           }
         })
 
@@ -44,11 +44,11 @@ export const authOptions: any = {
           return null
         }
 
-        logAuthAction('LOGIN', user.name, { userId: user.id, success: true })
+        logAuthAction('LOGIN', user.email, { userId: user.id, success: true })
 
         return {
           id: user.id,
-          name: user.name,
+          email: user.email,
         }
       }
     })

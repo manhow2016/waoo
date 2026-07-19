@@ -63,18 +63,18 @@ export default function SignIn() {
                   htmlFor='username'
                   className='glass-field-label block mb-2'
                 >
-                  {t('phoneNumber')}
+                  {t('email')}
                 </label>
                 <input
                   id='username'
                   name='username'
-                  type='text'
-                  autoComplete='username'
+                  type='email'
+                  autoComplete='email'
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   className='glass-input-base w-full px-4 py-3'
-                  placeholder={t('phoneNumberPlaceholder')}
+                  placeholder={t('emailPlaceholder')}
                 />
               </div>
 

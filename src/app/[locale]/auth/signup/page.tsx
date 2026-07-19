@@ -4,18 +4,22 @@ import { useState } from "react"
 import { useTranslations } from 'next-intl'
 import Navbar from "@/components/Navbar"
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator"
+import Turnstile from "@/components/auth/Turnstile"
 import { apiFetch } from '@/lib/api-fetch'
 import { Link, useRouter } from '@/i18n/navigation'
 
 export default function SignUp() {
-  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [turnstileToken, setTurnstileToken] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
   const t = useTranslations('auth')
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +39,12 @@ export default function SignUp() {
       return
     }
 
+    if (!turnstileToken) {
+      setError(t('captchaRequired'))
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await apiFetch("/api/auth/register", {
         method: "POST",
@@ -42,8 +52,9 @@ export default function SignUp() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
+          email,
           password,
+          turnstileToken,
         }),
       })
 
@@ -79,19 +90,19 @@ export default function SignUp() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="name" className="glass-field-label block mb-2">
-                  {t('phoneNumber')}
+                <label htmlFor="email" className="glass-field-label block mb-2">
+                  {t('email')}
                 </label>
                 <input
-                  id="name"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="glass-input-base w-full px-4 py-3"
-                  placeholder={t('phoneNumberPlaceholder')}
+                  placeholder={t('emailPlaceholder')}
                 />
               </div>
 
@@ -129,6 +140,20 @@ export default function SignUp() {
                   placeholder={t('confirmPasswordPlaceholder')}
                 />
               </div>
+
+              {turnstileSiteKey && (
+                <div>
+                  <label className="glass-field-label block mb-2">
+                    {t('captcha')}
+                  </label>
+                  <Turnstile
+                    siteKey={turnstileSiteKey}
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken("")}
+                    onError={() => setTurnstileToken("")}
+                  />
+                </div>
+              )}
 
               {error && (
                 <div className="bg-[var(--glass-tone-danger-bg)] border border-[color:color-mix(in_srgb,var(--glass-tone-danger-fg)_22%,transparent)] text-[var(--glass-tone-danger-fg)] px-4 py-3 rounded-lg text-sm">

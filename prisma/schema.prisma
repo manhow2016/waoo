@@ -402,8 +402,8 @@ model UsageCost {
 
 model User {
   id            String          @id @default(uuid())
-  name          String          @unique(map: "User_name_key")
-  email         String?
+  name          String?
+  email         String          @unique
   emailVerified DateTime?
   image         String?
   password      String?

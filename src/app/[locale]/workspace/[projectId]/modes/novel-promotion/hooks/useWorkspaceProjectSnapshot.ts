@@ -43,6 +43,8 @@ export function useWorkspaceProjectSnapshot({
       videoModel: projectData?.videoModel,
       audioModel: projectData?.audioModel,
       videoRatio: projectData?.videoRatio,
+      videoResolution: projectData?.videoResolution,
+      videoDuration: projectData?.videoDuration,
       capabilityOverrides,
       ttsRate: projectData?.ttsRate,
       artStyle: projectData?.artStyle,

@@ -5,7 +5,7 @@
   "openSourceNoBilling": "Open-source edition, no billing required",
   "frozen": "Frozen",
   "totalSpent": "Total Spent",
-  "apiConfig": "API Configuration",
+  "apiConfig": "Model Configuration",
   "rechargeRecords": "Recharge Records",
   "billingRecords": "Billing Records",
   "logout": "Logout",

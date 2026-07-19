@@ -260,6 +260,7 @@ model NovelPromotionProject {
   storyboardModel String? // 用户配置的分镜图片模型
   editModel       String? // 用户配置的修图/编辑模型
   videoResolution String                    @default("720p")
+  videoDuration   String                    @default("5")
   capabilityOverrides String?              @db.Text
   workflowMode    String                    @default("srt")
   lastEpisodeId   String?

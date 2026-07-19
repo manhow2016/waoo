@@ -120,6 +120,12 @@ export const VIDEO_RESOLUTIONS = [
   { value: '1080p', label: '1080p' }
 ]
 
+export const VIDEO_DURATIONS = [
+  { value: '3', label: '3秒' },
+  { value: '5', label: '5秒' },
+  { value: '10', label: '10秒' }
+]
+
 export const TTS_RATES = [
   { value: '+0%', label: '正常速度 (1.0x)' },
   { value: '+20%', label: '轻微加速 (1.2x)' },

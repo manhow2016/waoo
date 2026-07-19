@@ -293,8 +293,8 @@ export const PATCH = apiHandler(async (
 
   const allowedProjectFields = [
     'analysisModel', 'characterModel', 'locationModel', 'storyboardModel',
-    'editModel', 'videoModel', 'audioModel', 'videoRatio', 'artStyle',
-    'ttsRate', 'lipSyncEnabled', 'lipSyncMode', 'capabilityOverrides',
+    'editModel', 'videoModel', 'audioModel', 'videoRatio', 'videoResolution',
+    'videoDuration', 'artStyle', 'ttsRate', 'lipSyncEnabled', 'lipSyncMode', 'capabilityOverrides',
   ] as const
 
   const updateData: Record<string, unknown> = {}

@@ -104,6 +104,72 @@ export function RatioSelector({ value, onChange, options }: RatioSelectorProps) 
   )
 }
 
+export function ResolutionSelector({ value, onChange, options }: RatioSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find((option) => option.value === value)
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="glass-input-base h-11 px-3 flex items-center justify-between gap-2 cursor-pointer transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm text-[var(--glass-text-primary)] font-medium">
+            {selectedOption?.label || value}
+          </span>
+        </div>
+        <AppIcon name="chevronDown" className={`w-4 h-4 text-[var(--glass-text-tertiary)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div
+          className="glass-surface-modal absolute z-50 mt-1 left-0 right-0 p-3"
+          style={{ minWidth: '200px' }}
+        >
+          <div className="flex flex-col gap-2">
+            {options.map((option) => {
+              const isSelected = value === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value)
+                    setIsOpen(false)
+                  }}
+                  className={`flex items-center p-3 rounded-xl border transition-all ${
+                    isSelected
+                      ? 'border-[var(--glass-accent-from)] bg-[var(--glass-accent-from)]/5 shadow-sm'
+                      : 'border-[var(--glass-stroke-soft)] hover:border-[var(--glass-stroke-strong)]'
+                  }`}
+                >
+                  <span className={`text-sm ${isSelected ? 'font-semibold text-[var(--glass-accent-from)]' : 'text-[var(--glass-text-secondary)]'}`}>
+                    {option.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function StyleSelector({ value, onChange, options }: StyleSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)

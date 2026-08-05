@@ -26,6 +26,7 @@ import { shouldGuideToModelSetup } from '@/lib/workspace/model-setup'
 import { readApiErrorMessage } from '@/lib/api/read-error-message'
 import { validateProjectDraft } from '@/lib/projects/validation'
 import AiWriteModal from '@/components/home/AiWriteModal'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 interface ProjectStats {
   episodes: number
@@ -84,6 +85,9 @@ export default function HomePage() {
   const t = useTranslations('home')
   const tw = useTranslations('workspace')
   const tc = useTranslations('common')
+
+  // 分页状态：快速创作 / 项目管理
+  const [activeTab, setActiveTab] = useState<'creation' | 'projects'>('creation')
 
   // 快速创作状态
   const [inputValue, setInputValue] = useState('')
@@ -426,358 +430,377 @@ export default function HomePage() {
 
       <main className="flex flex-col items-center pt-[13vh] pb-12 px-4 max-w-5xl mx-auto w-full">
 
-        {/* 取景器整体包裹：标题 + 输入框 */}
-        <div className="w-full relative p-5">
-          {/* 四角校准线 */}
-          <span className="absolute top-0 left-0 w-5 h-5 border-t border-l border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
-          <span className="absolute top-0 right-0 w-5 h-5 border-t border-r border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
-          <span className="absolute bottom-0 left-0 w-5 h-5 border-b border-l border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
-          <span className="absolute bottom-0 right-0 w-5 h-5 border-b border-r border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
-
-          {/* REC 录制指示灯 */}
-          <span
-            className="absolute top-2 right-7 flex items-center gap-1 z-10"
-            style={{ animation: 'bracket-breathe 2s ease-in-out infinite' }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.7)]" />
-            <span className="text-[8px] font-mono font-bold tracking-widest text-red-500/70">REC</span>
-          </span>
-
-          {/* 标题区 */}
-          <TypewriterHero title={t('title')} subtitle={t('subtitle')} />
-
-          {/* 呼吸光晕 + 输入区域 */}
-          <div className="w-full relative group">
-            <div
-              className="absolute -inset-10 rounded-[48px] pointer-events-none"
-              style={{
-                background: 'radial-gradient(ellipse 80% 60% at 30% 40%, rgba(6, 182, 212, 0.4), transparent 70%)',
-                animation: 'breathe-drift-1 8s ease-in-out infinite',
-                filter: 'blur(30px)',
-              }}
-            />
-            <div
-              className="absolute -inset-10 rounded-[48px] pointer-events-none"
-              style={{
-                background: 'radial-gradient(ellipse 70% 80% at 70% 60%, rgba(139, 92, 246, 0.35), transparent 70%)',
-                animation: 'breathe-drift-2 10s ease-in-out infinite',
-                filter: 'blur(35px)',
-              }}
-            />
-            <div
-              className="absolute -inset-12 rounded-[56px] pointer-events-none"
-              style={{
-                background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(59, 130, 246, 0.3), transparent 70%)',
-                animation: 'breathe-drift-3 12s ease-in-out infinite',
-                filter: 'blur(40px)',
-              }}
-            />
-
-            <StoryInputComposer
-              value={inputValue}
-              onValueChange={(nextValue) => {
-                setInputValue(nextValue)
-                if (createError) {
-                  setCreateError(null)
-                }
-              }}
-              placeholder={t('inputPlaceholder')}
-              minRows={HOME_QUICK_START_MIN_ROWS}
-              textareaClassName="px-0 pt-0 pb-3 align-top"
-              videoRatio={videoRatio}
-              onVideoRatioChange={setVideoRatio}
-              ratioOptions={ratioOptions}
-              artStyle={artStyle}
-              onArtStyleChange={setArtStyle}
-              styleOptions={styleOptions}
-              stylePresetValue={stylePresetValue}
-              onStylePresetChange={setStylePresetValue}
-              stylePresetOptions={STYLE_PRESETS}
-              primaryAction={(
-                <button
-                  onClick={() => void handleCreate()}
-                  disabled={!inputValue.trim() || createLoading}
-                  className="glass-btn-base glass-btn-primary h-10 flex-shrink-0 px-5 text-sm disabled:opacity-50"
-                >
-                  {createLoading ? tc('loading') : t('startCreation')}
-                  <AppIcon name="arrowRight" className="w-4 h-4" />
-                </button>
-              )}
-              secondaryActions={(
-                <button
-                  onClick={() => setAiWriteOpen(true)}
-                  disabled={createLoading}
-                  className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
-                >
-                  <AppIcon name="sparkles" className="w-4 h-4 text-[#7c3aed]" />
-                  <span
-                    className="font-medium"
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
-                  >
-                    {t('aiWrite.trigger')}
-                  </span>
-                </button>
-              )}
-              footer={createError ? (
-                <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">
-                  {createError}
-                </p>
-              ) : null}
-            />
-          </div>
+        {/* 分页控制 */}
+        <div className="w-full max-w-sm mb-8">
+          <SegmentedControl
+            options={[
+              { value: 'creation', label: t('tabCreation') },
+              { value: 'projects', label: t('tabProjects') },
+            ]}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as 'creation' | 'projects')}
+          />
         </div>
-        {/* AI 帮我写模态框 */}
-        <AiWriteModal
-          open={aiWriteOpen}
-          loading={aiWriteLoading}
-          onClose={() => setAiWriteOpen(false)}
-          onStart={(prompt) => void handleAiWriteStart(prompt)}
-          t={(key: string) => t(`aiWrite.${key}`)}
-        />
+
+        {/* 快速创作分页 */}
+        {activeTab === 'creation' && (
+          <>
+            {/* 取景器整体包裹：标题 + 输入框 */}
+            <div className="w-full relative p-5">
+              {/* 四角校准线 */}
+              <span className="absolute top-0 left-0 w-5 h-5 border-t border-l border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
+              <span className="absolute top-0 right-0 w-5 h-5 border-t border-r border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
+              <span className="absolute bottom-0 left-0 w-5 h-5 border-b border-l border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
+              <span className="absolute bottom-0 right-0 w-5 h-5 border-b border-r border-[var(--glass-text-primary)] pointer-events-none z-10" style={{ animation: 'bracket-breathe 8s ease-in-out infinite' }} />
+
+              {/* REC 录制指示灯 */}
+              <span
+                className="absolute top-2 right-7 flex items-center gap-1 z-10"
+                style={{ animation: 'bracket-breathe 2s ease-in-out infinite' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.7)]" />
+                <span className="text-[8px] font-mono font-bold tracking-widest text-red-500/70">REC</span>
+              </span>
+
+              {/* 标题区 */}
+              <TypewriterHero title={t('title')} subtitle={t('subtitle')} />
+
+              {/* 呼吸光晕 + 输入区域 */}
+              <div className="w-full relative group">
+                <div
+                  className="absolute -inset-10 rounded-[48px] pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse 80% 60% at 30% 40%, rgba(6, 182, 212, 0.4), transparent 70%)',
+                    animation: 'breathe-drift-1 8s ease-in-out infinite',
+                    filter: 'blur(30px)',
+                  }}
+                />
+                <div
+                  className="absolute -inset-10 rounded-[48px] pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse 70% 80% at 70% 60%, rgba(139, 92, 246, 0.35), transparent 70%)',
+                    animation: 'breathe-drift-2 10s ease-in-out infinite',
+                    filter: 'blur(35px)',
+                  }}
+                />
+                <div
+                  className="absolute -inset-12 rounded-[56px] pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(59, 130, 246, 0.3), transparent 70%)',
+                    animation: 'breathe-drift-3 12s ease-in-out infinite',
+                    filter: 'blur(40px)',
+                  }}
+                />
+
+                <StoryInputComposer
+                  value={inputValue}
+                  onValueChange={(nextValue) => {
+                    setInputValue(nextValue)
+                    if (createError) {
+                      setCreateError(null)
+                    }
+                  }}
+                  placeholder={t('inputPlaceholder')}
+                  minRows={HOME_QUICK_START_MIN_ROWS}
+                  textareaClassName="px-0 pt-0 pb-3 align-top"
+                  videoRatio={videoRatio}
+                  onVideoRatioChange={setVideoRatio}
+                  ratioOptions={ratioOptions}
+                  artStyle={artStyle}
+                  onArtStyleChange={setArtStyle}
+                  styleOptions={styleOptions}
+                  stylePresetValue={stylePresetValue}
+                  onStylePresetChange={setStylePresetValue}
+                  stylePresetOptions={STYLE_PRESETS}
+                  primaryAction={(
+                    <button
+                      onClick={() => void handleCreate()}
+                      disabled={!inputValue.trim() || createLoading}
+                      className="glass-btn-base glass-btn-primary h-10 flex-shrink-0 px-5 text-sm disabled:opacity-50"
+                    >
+                      {createLoading ? tc('loading') : t('startCreation')}
+                      <AppIcon name="arrowRight" className="w-4 h-4" />
+                    </button>
+                  )}
+                  secondaryActions={(
+                    <button
+                      onClick={() => setAiWriteOpen(true)}
+                      disabled={createLoading}
+                      className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
+                    >
+                      <AppIcon name="sparkles" className="w-4 h-4 text-[#7c3aed]" />
+                      <span
+                        className="font-medium"
+                        style={{
+                          background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                        }}
+                      >
+                        {t('aiWrite.trigger')}
+                      </span>
+                    </button>
+                  )}
+                  footer={createError ? (
+                    <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">
+                      {createError}
+                    </p>
+                  ) : null}
+                />
+              </div>
+            </div>
+            {/* AI 帮我写模态框 */}
+            <AiWriteModal
+              open={aiWriteOpen}
+              loading={aiWriteLoading}
+              onClose={() => setAiWriteOpen(false)}
+              onStart={(prompt) => void handleAiWriteStart(prompt)}
+              t={(key: string) => t(`aiWrite.${key}`)}
+            />
+          </>
+        )}
       </main>
 
-      {/* 项目管理区域 */}
-      <section className="px-4 sm:px-6 lg:px-10 pb-8 max-w-[1600px] mx-auto w-full">
-        {/* 搜索栏 */}
-        <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-sm font-semibold text-[var(--glass-text-secondary)]">{t('recentProjects')}</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder={tw('searchPlaceholder')}
-              className="glass-input-base w-48 sm:w-64 px-3 py-2 text-sm"
-            />
-            <button
-              onClick={handleSearch}
-              className="glass-btn-base glass-btn-primary px-4 py-2 text-sm"
-            >
-              {tw('searchButton')}
-            </button>
-            {searchQuery && (
+      {/* 项目管理分页 */}
+      {activeTab === 'projects' && (
+        <section className="px-4 sm:px-6 lg:px-10 pb-8 max-w-[1600px] mx-auto w-full">
+          {/* 搜索栏 */}
+          <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-sm font-semibold text-[var(--glass-text-secondary)]">{t('recentProjects')}</h2>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder={tw('searchPlaceholder')}
+                className="glass-input-base w-48 sm:w-64 px-3 py-2 text-sm"
+              />
               <button
-                onClick={() => {
-                  setSearchInput('')
-                  setSearchQuery('')
-                  setPagination(prev => ({ ...prev, page: 1 }))
-                }}
-                className="glass-btn-base glass-btn-secondary px-4 py-2 text-sm"
+                onClick={handleSearch}
+                className="glass-btn-base glass-btn-primary px-4 py-2 text-sm"
               >
-                {tw('clearButton')}
+                {tw('searchButton')}
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* 项目网格 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* 新建项目卡片 */}
-          <div
-            onClick={() => openCreateModal()}
-            className="glass-surface p-6 cursor-pointer group flex items-center justify-center bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-blue-600/5 hover:from-blue-500/10 hover:via-cyan-500/10 hover:to-blue-600/10 transition-all duration-300"
-          >
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 group-hover:scale-110 transition-all duration-300">
-                <AppIcon name="plus" className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-sm font-medium text-[var(--glass-text-secondary)] group-hover:text-[var(--glass-text-primary)] transition-colors">{tw('newProject')}</span>
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchInput('')
+                    setSearchQuery('')
+                    setPagination(prev => ({ ...prev, page: 1 }))
+                  }}
+                  className="glass-btn-base glass-btn-secondary px-4 py-2 text-sm"
+                >
+                  {tw('clearButton')}
+                </button>
+              )}
             </div>
           </div>
 
-          {/* 项目卡片 */}
-          {loading ? (
-            Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="glass-surface p-6 animate-pulse">
-                <div className="h-4 bg-[var(--glass-bg-muted)] rounded mb-3" />
-                <div className="h-3 bg-[var(--glass-bg-muted)] rounded mb-2" />
-                <div className="h-3 bg-[var(--glass-bg-muted)] rounded w-2/3" />
-              </div>
-            ))
-          ) : (
-            projects.map((project) => (
-              <Link
-                key={project.id}
-                href={{ pathname: `/workspace/${project.id}` }}
-                className="glass-surface cursor-pointer relative group block hover:border-[var(--glass-tone-info-fg)]/40 transition-all duration-300 overflow-hidden"
-              >
-                {/* 悬停光效 */}
-                <div className="absolute inset-0 rounded-[inherit] bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-                <div className="p-5 relative z-10">
-                  {/* 操作按钮 */}
-                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button
-                      onClick={(e) => openEditModal(project, e)}
-                      className="glass-btn-base glass-btn-secondary p-2 rounded-lg transition-colors"
-                      title={tw('editProject')}
-                    >
-                      <AppIcon name="editSquare" className="w-4 h-4 text-[var(--glass-tone-info-fg)]" />
-                    </button>
-                    <button
-                      onClick={(e) => openDeleteConfirm(project, e)}
-                      className="glass-btn-base glass-btn-secondary p-2 rounded-lg transition-colors"
-                      title={tw('deleteProject')}
-                      disabled={deletingProjectId === project.id}
-                    >
-                      {deletingProjectId === project.id ? (
-                        <TaskStatusInline
-                          state={resolveTaskPresentationState({
-                            phase: 'processing',
-                            intent: 'process',
-                            resource: 'text',
-                            hasOutput: true,
-                          })}
-                          className="[&>span]:sr-only"
-                        />
-                      ) : (
-                        <AppIcon name="trash" className="w-4 h-4 text-[var(--glass-tone-danger-fg)]" />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 标题 */}
-                  <h3 className="text-base font-bold text-[var(--glass-text-primary)] mb-2 line-clamp-2 pr-20 group-hover:text-[var(--glass-tone-info-fg)] transition-colors">
-                    {project.name}
-                  </h3>
-
-                  {/* 描述 */}
-                  {(project.description || project.stats?.firstEpisodePreview) && (
-                    <div className="flex items-start gap-2 mb-3">
-                      <AppIcon name="fileText" className="w-3.5 h-3.5 text-[var(--glass-text-tertiary)] mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-[var(--glass-text-secondary)] line-clamp-2 leading-relaxed">
-                        {project.description || project.stats?.firstEpisodePreview}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 统计信息 */}
-                  {project.stats && (project.stats.episodes > 0 || project.stats.images > 0 || project.stats.videos > 0) ? (
-                    <div className="flex items-center gap-2 mb-3">
-                      <IconGradientDefs className="w-0 h-0 absolute" aria-hidden="true" />
-                      <AppIcon name="statsBarGradient" className="w-4 h-4 flex-shrink-0" />
-                      <div className="flex items-center gap-3 text-sm font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-                        {project.stats.episodes > 0 && (
-                          <span className="flex items-center gap-1" title={tw('statsEpisodes')}>
-                            <AppIcon name="statsEpisodeGradient" className="w-3.5 h-3.5" />
-                            {project.stats.episodes}
-                          </span>
-                        )}
-                        {project.stats.images > 0 && (
-                          <span className="flex items-center gap-1" title={tw('statsImages')}>
-                            <AppIcon name="statsImageGradient" className="w-3.5 h-3.5" />
-                            {project.stats.images}
-                          </span>
-                        )}
-                        {project.stats.videos > 0 && (
-                          <span className="flex items-center gap-1" title={tw('statsVideos')}>
-                            <AppIcon name="statsVideoGradient" className="w-3.5 h-3.5" />
-                            {project.stats.videos}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <AppIcon name="statsBar" className="w-4 h-4 text-[var(--glass-text-tertiary)] flex-shrink-0" />
-                      <span className="text-xs text-[var(--glass-text-tertiary)]">{tw('noContent')}</span>
-                    </div>
-                  )}
-
-                  {/* 底部信息 */}
-                  <div className="flex items-center justify-between text-[11px] text-[var(--glass-text-tertiary)]">
-                    <div className="flex items-center gap-1">
-                      <AppIcon name="clock" className="w-3 h-3" />
-                      {formatDate(project.updatedAt)}
-                    </div>
-                    {project.totalCost !== undefined && project.totalCost > 0 && (
-                      <span className="text-[11px] font-mono font-medium text-[var(--glass-text-secondary)]">
-                        {formatProjectCost(project.totalCost)}
-                      </span>
-                    )}
-                  </div>
+          {/* 项目网格 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {/* 新建项目卡片 */}
+            <div
+              onClick={() => openCreateModal()}
+              className="glass-surface p-6 cursor-pointer group flex items-center justify-center bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-blue-600/5 hover:from-blue-500/10 hover:via-cyan-500/10 hover:to-blue-600/10 transition-all duration-300"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 group-hover:scale-110 transition-all duration-300">
+                  <AppIcon name="plus" className="w-6 h-6 text-white" />
                 </div>
-              </Link>
-            ))
-          )}
-        </div>
-
-        {/* 空状态 */}
-        {!loading && projects.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-[var(--glass-bg-muted)] rounded-xl flex items-center justify-center mx-auto mb-4">
-              <AppIcon name="folderCards" className="w-8 h-8 text-[var(--glass-text-tertiary)]" />
+                <span className="text-sm font-medium text-[var(--glass-text-secondary)] group-hover:text-[var(--glass-text-primary)] transition-colors">{tw('newProject')}</span>
+              </div>
             </div>
-            <h3 className="text-lg font-medium text-[var(--glass-text-primary)] mb-2">
-              {searchQuery ? tw('noResults') : tw('noProjects')}
-            </h3>
-            <p className="text-[var(--glass-text-secondary)] mb-6">
-              {searchQuery ? tw('noResultsDesc') : tw('noProjectsDesc')}
-            </p>
-            {!searchQuery && (
-              <button
-                onClick={() => openCreateModal()}
-                className="glass-btn-base glass-btn-primary px-6 py-3"
-              >
-                {tw('newProject')}
-              </button>
+
+            {/* 项目卡片 */}
+            {loading ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="glass-surface p-6 animate-pulse">
+                  <div className="h-4 bg-[var(--glass-bg-muted)] rounded mb-3" />
+                  <div className="h-3 bg-[var(--glass-bg-muted)] rounded mb-2" />
+                  <div className="h-3 bg-[var(--glass-bg-muted)] rounded w-2/3" />
+                </div>
+              ))
+            ) : (
+              projects.map((project) => (
+                <Link
+                  key={project.id}
+                  href={{ pathname: `/workspace/${project.id}` }}
+                  className="glass-surface cursor-pointer relative group block hover:border-[var(--glass-tone-info-fg)]/40 transition-all duration-300 overflow-hidden"
+                >
+                  {/* 悬停光效 */}
+                  <div className="absolute inset-0 rounded-[inherit] bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                  <div className="p-5 relative z-10">
+                    {/* 操作按钮 */}
+                    <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                      <button
+                        onClick={(e) => openEditModal(project, e)}
+                        className="glass-btn-base glass-btn-secondary p-2 rounded-lg transition-colors"
+                        title={tw('editProject')}
+                      >
+                        <AppIcon name="editSquare" className="w-4 h-4 text-[var(--glass-tone-info-fg)]" />
+                      </button>
+                      <button
+                        onClick={(e) => openDeleteConfirm(project, e)}
+                        className="glass-btn-base glass-btn-secondary p-2 rounded-lg transition-colors"
+                        title={tw('deleteProject')}
+                        disabled={deletingProjectId === project.id}
+                      >
+                        {deletingProjectId === project.id ? (
+                          <TaskStatusInline
+                            state={resolveTaskPresentationState({
+                              phase: 'processing',
+                              intent: 'process',
+                              resource: 'text',
+                              hasOutput: true,
+                            })}
+                            className="[&>span]:sr-only"
+                          />
+                        ) : (
+                          <AppIcon name="trash" className="w-4 h-4 text-[var(--glass-tone-danger-fg)]" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* 标题 */}
+                    <h3 className="text-base font-bold text-[var(--glass-text-primary)] mb-2 line-clamp-2 pr-20 group-hover:text-[var(--glass-tone-info-fg)] transition-colors">
+                      {project.name}
+                    </h3>
+
+                    {/* 描述 */}
+                    {(project.description || project.stats?.firstEpisodePreview) && (
+                      <div className="flex items-start gap-2 mb-3">
+                        <AppIcon name="fileText" className="w-3.5 h-3.5 text-[var(--glass-text-tertiary)] mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-[var(--glass-text-secondary)] line-clamp-2 leading-relaxed">
+                          {project.description || project.stats?.firstEpisodePreview}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 统计信息 */}
+                    {project.stats && (project.stats.episodes > 0 || project.stats.images > 0 || project.stats.videos > 0) ? (
+                      <div className="flex items-center gap-2 mb-3">
+                        <IconGradientDefs className="w-0 h-0 absolute" aria-hidden="true" />
+                        <AppIcon name="statsBarGradient" className="w-4 h-4 flex-shrink-0" />
+                        <div className="flex items-center gap-3 text-sm font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                          {project.stats.episodes > 0 && (
+                            <span className="flex items-center gap-1" title={tw('statsEpisodes')}>
+                              <AppIcon name="statsEpisodeGradient" className="w-3.5 h-3.5" />
+                              {project.stats.episodes}
+                            </span>
+                          )}
+                          {project.stats.images > 0 && (
+                            <span className="flex items-center gap-1" title={tw('statsImages')}>
+                              <AppIcon name="statsImageGradient" className="w-3.5 h-3.5" />
+                              {project.stats.images}
+                            </span>
+                          )}
+                          {project.stats.videos > 0 && (
+                            <span className="flex items-center gap-1" title={tw('statsVideos')}>
+                              <AppIcon name="statsVideoGradient" className="w-3.5 h-3.5" />
+                              {project.stats.videos}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <AppIcon name="statsBar" className="w-4 h-4 text-[var(--glass-text-tertiary)] flex-shrink-0" />
+                        <span className="text-xs text-[var(--glass-text-tertiary)]">{tw('noContent')}</span>
+                      </div>
+                    )}
+
+                    {/* 底部信息 */}
+                    <div className="flex items-center justify-between text-[11px] text-[var(--glass-text-tertiary)]">
+                      <div className="flex items-center gap-1">
+                        <AppIcon name="clock" className="w-3 h-3" />
+                        {formatDate(project.updatedAt)}
+                      </div>
+                      {project.totalCost !== undefined && project.totalCost > 0 && (
+                        <span className="text-[11px] font-mono font-medium text-[var(--glass-text-secondary)]">
+                          {formatProjectCost(project.totalCost)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))
             )}
           </div>
-        )}
 
-        {/* 分页控件 */}
-        {!loading && pagination.totalPages > 1 && (
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              className="glass-btn-base glass-btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <AppIcon name="chevronLeft" className="w-5 h-5" />
-            </button>
+          {/* 空状态 */}
+          {!loading && projects.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-[var(--glass-bg-muted)] rounded-xl flex items-center justify-center mx-auto mb-4">
+                <AppIcon name="folderCards" className="w-8 h-8 text-[var(--glass-text-tertiary)]" />
+              </div>
+              <h3 className="text-lg font-medium text-[var(--glass-text-primary)] mb-2">
+                {searchQuery ? tw('noResults') : tw('noProjects')}
+              </h3>
+              <p className="text-[var(--glass-text-secondary)] mb-6">
+                {searchQuery ? tw('noResultsDesc') : tw('noProjectsDesc')}
+              </p>
+              {!searchQuery && (
+                <button
+                  onClick={() => openCreateModal()}
+                  className="glass-btn-base glass-btn-primary px-6 py-3"
+                >
+                  {tw('newProject')}
+                </button>
+              )}
+            </div>
+          )}
 
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                return page === 1 ||
-                  page === pagination.totalPages ||
-                  Math.abs(page - pagination.page) <= 2
-              })
-              .map((page, index, array) => (
-                <span key={page} className="flex items-center">
-                  {index > 0 && array[index - 1] !== page - 1 && (
-                    <span className="px-2 text-[var(--glass-text-tertiary)]">...</span>
-                  )}
-                  <button
-                    onClick={() => handlePageChange(page)}
-                    className={`glass-btn-base px-4 py-2 ${page === pagination.page
-                      ? 'glass-btn-primary'
-                      : 'glass-btn-secondary'
-                      }`}
-                  >
-                    {page}
-                  </button>
-                </span>
-              ))}
+          {/* 分页控件 */}
+          {!loading && pagination.totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="glass-btn-base glass-btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <AppIcon name="chevronLeft" className="w-5 h-5" />
+              </button>
 
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              className="glass-btn-base glass-btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <AppIcon name="chevronRight" className="w-5 h-5" />
-            </button>
+              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  return page === 1 ||
+                    page === pagination.totalPages ||
+                    Math.abs(page - pagination.page) <= 2
+                })
+                .map((page, index, array) => (
+                  <span key={page} className="flex items-center">
+                    {index > 0 && array[index - 1] !== page - 1 && (
+                      <span className="px-2 text-[var(--glass-text-tertiary)]">...</span>
+                    )}
+                    <button
+                      onClick={() => handlePageChange(page)}
+                      className={`glass-btn-base px-4 py-2 ${page === pagination.page
+                        ? 'glass-btn-primary'
+                        : 'glass-btn-secondary'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  </span>
+                ))}
 
-            <span className="ml-4 text-sm text-[var(--glass-text-tertiary)]">
-              {tw('totalProjects', { count: pagination.total })}
-            </span>
-          </div>
-        )}
-      </section>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.totalPages}
+                className="glass-btn-base glass-btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <AppIcon name="chevronRight" className="w-5 h-5" />
+              </button>
+
+              <span className="ml-4 text-sm text-[var(--glass-text-tertiary)]">
+                {tw('totalProjects', { count: pagination.total })}
+              </span>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 新建项目弹窗 */}
       {showCreateModal && (

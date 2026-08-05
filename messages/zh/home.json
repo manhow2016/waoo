@@ -7,6 +7,8 @@
   "recentProjects": "我的项目",
   "viewAll": "查看全部项目",
   "noProjects": "还没有项目，从上方开始你的第一个创作吧",
+  "tabCreation": "快速创作",
+  "tabProjects": "项目管理",
   "ago": {
     "justNow": "刚刚",
     "minutesAgo": "{n}分钟前",

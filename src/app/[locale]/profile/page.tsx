@@ -1,48 +1,17 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import ApiConfigTab from './components/ApiConfigTab';
-import BillingTab from './components/BillingTab';
 import { AppIcon } from '@/components/ui/icons';
 import { useRouter } from '@/i18n/navigation';
-import { apiFetch } from '@/lib/api-fetch';
-
-interface BalanceInfo {
-  balance: number;
-  frozenAmount: number;
-  totalSpent: number;
-}
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const t = useTranslations('profile');
   const tc = useTranslations('common');
-
-  // 主要分区：扣费记录 / API配置
-  const [activeSection, setActiveSection] = useState<'billing' | 'apiConfig'>(
-    'apiConfig',
-  );
-  const [balance, setBalance] = useState<BalanceInfo | null>(null);
-
-  // 获取余额
-  const fetchBalance = useCallback(async () => {
-    try {
-      const res = await apiFetch('/api/user/balance');
-      if (res.ok) {
-        const data = await res.json();
-        setBalance({
-          balance: data.balance,
-          frozenAmount: data.frozenAmount,
-          totalSpent: data.totalSpent,
-        });
-      }
-    } catch {
-      // 静默处理
-    }
-  }, []);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -51,12 +20,6 @@ export default function ProfilePage() {
       return;
     }
   }, [router, session, status]);
-
-  useEffect(() => {
-    if (session) {
-      void fetchBalance();
-    }
-  }, [session, fetchBalance]);
 
   if (status === 'loading' || !session) {
     return (
@@ -87,52 +50,14 @@ export default function ProfilePage() {
                     {t('personalAccount')}
                   </p>
                 </div>
-
-                {/* 余额卡片 */}
-                <div className='glass-surface-soft rounded-2xl border border-[var(--glass-stroke-base)] p-4'>
-                  <div className='text-xs font-medium text-[var(--glass-text-secondary)]'>
-                    {t('availableBalance')}
-                  </div>
-                  <div className='mt-2 text-xl font-bold text-[var(--glass-text-primary)]'>
-                    ¥{(balance?.balance ?? 0).toFixed(2)}
-                  </div>
-                  <div className='mt-2 flex items-center gap-3 text-xs text-[var(--glass-text-tertiary)]'>
-                    <span>
-                      {t('frozen')}: ¥{(balance?.frozenAmount ?? 0).toFixed(2)}
-                    </span>
-                    <span>
-                      {t('totalSpent')}: ¥
-                      {(balance?.totalSpent ?? 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
               </div>
 
               {/* 导航菜单 */}
               <nav className='flex-1 space-y-2'>
-                <button
-                  onClick={() => setActiveSection('apiConfig')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer ${
-                    activeSection === 'apiConfig'
-                      ? 'glass-btn-base glass-btn-tone-info'
-                      : 'text-[var(--glass-text-secondary)] hover:bg-[var(--glass-bg-muted)]'
-                  }`}
-                >
+                <div className='w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left glass-btn-base glass-btn-tone-info'>
                   <AppIcon name='settingsHexAlt' className='w-5 h-5' />
                   <span className='font-medium'>{t('apiConfig')}</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveSection('billing')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer ${
-                    activeSection === 'billing'
-                      ? 'glass-btn-base glass-btn-tone-info'
-                      : 'text-[var(--glass-text-secondary)] hover:bg-[var(--glass-bg-muted)]'
-                  }`}
-                >
-                  <AppIcon name='receipt' className='w-5 h-5' />
-                  <span className='font-medium'>{t('billingRecords')}</span>
-                </button>
+                </div>
               </nav>
               {/* 退出登录 */}
               <button
@@ -148,11 +73,7 @@ export default function ProfilePage() {
           {/* 右侧内容区 */}
           <div className='flex-1 min-w-0'>
             <div className='glass-surface-elevated h-full flex flex-col'>
-              {activeSection === 'apiConfig' ? (
-                <ApiConfigTab />
-              ) : (
-                <BillingTab />
-              )}
+              <ApiConfigTab />
             </div>
           </div>
         </div>

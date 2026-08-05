@@ -7,6 +7,8 @@
   "recentProjects": "My Projects",
   "viewAll": "View All Projects",
   "noProjects": "No projects yet. Start your first creation from above!",
+  "tabCreation": "Quick Create",
+  "tabProjects": "Project Management",
   "ago": {
     "justNow": "Just now",
     "minutesAgo": "{n}m ago",

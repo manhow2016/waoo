@@ -167,6 +167,7 @@
     "close": "Got it",
     "openLink": "Open link",
     "steps": {
+      "token61_step1": "Go to Token61 platform, register and get an API Key",
       "ark_step1": "Go to the Volcano Engine console to create an API Key",
       "ark_step2": "On the model management page, click 'Enable All Models' button in the top right corner",
       "openrouter_step1": "Go to OpenRouter platform and create an API Key (must select models with image capabilities)",

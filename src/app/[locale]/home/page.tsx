@@ -27,6 +27,7 @@ import { readApiErrorMessage } from '@/lib/api/read-error-message'
 import { validateProjectDraft } from '@/lib/projects/validation'
 import AiWriteModal from '@/components/home/AiWriteModal'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import AiImageTab from '@/components/home/ai-image/AiImageTab'
 
 interface ProjectStats {
   episodes: number
@@ -86,8 +87,8 @@ export default function HomePage() {
   const tw = useTranslations('workspace')
   const tc = useTranslations('common')
 
-  // 分页状态：快速创作 / 项目管理
-  const [activeTab, setActiveTab] = useState<'creation' | 'projects'>('creation')
+  // 分页状态：快速创作 / AI图片 / 项目管理
+  const [activeTab, setActiveTab] = useState<'creation' | 'aiImage' | 'projects'>('creation')
 
   // 快速创作状态
   const [inputValue, setInputValue] = useState('')
@@ -431,14 +432,15 @@ export default function HomePage() {
       <main className="flex flex-col items-center pt-[13vh] pb-12 px-4 max-w-5xl mx-auto w-full">
 
         {/* 分页控制 */}
-        <div className="w-full max-w-sm mb-8">
+        <div className="w-full max-w-md mb-8">
           <SegmentedControl
             options={[
               { value: 'creation', label: t('tabCreation') },
+              { value: 'aiImage', label: t('tabAiImage') },
               { value: 'projects', label: t('tabProjects') },
             ]}
             value={activeTab}
-            onChange={(v) => setActiveTab(v as 'creation' | 'projects')}
+            onChange={(v) => setActiveTab(v as 'creation' | 'aiImage' | 'projects')}
           />
         </div>
 
@@ -558,6 +560,13 @@ export default function HomePage() {
               t={(key: string) => t(`aiWrite.${key}`)}
             />
           </>
+        )}
+
+        {/* AI图片分页 */}
+        {activeTab === 'aiImage' && (
+          <div className="w-full">
+            <AiImageTab />
+          </div>
         )}
       </main>
 

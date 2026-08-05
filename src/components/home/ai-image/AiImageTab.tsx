@@ -33,7 +33,7 @@ const FEATURES: FeatureCard[] = [
   },
   {
     id: 'canvas',
-    icon: 'canvas',
+    icon: 'folderOpen',
     titleKey: 'aiImage.canvas.title',
     descriptionKey: 'aiImage.canvas.description',
     color: 'from-purple-500 to-pink-500',
@@ -126,7 +126,7 @@ export default function AiImageTab() {
           >
             {/* 图标 */}
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-all duration-300 ${feature.color}`}>
-              <AppIcon name={feature.icon as 'image' | 'search' | 'film' | 'canvas'} className="w-6 h-6 text-white" />
+              <AppIcon name={feature.icon as 'image' | 'folderOpen' | 'search' | 'film'} className="w-6 h-6 text-white" />
             </div>
 
             {/* 标题 */}

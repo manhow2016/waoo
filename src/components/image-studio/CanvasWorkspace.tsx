@@ -20,6 +20,7 @@ import {
   collectUpstreamResources,
   composeConfigPrompt,
   type CanvasNode,
+  type CanvasConnection,
   type CanvasNodeType,
   type CanvasProject,
 } from './canvas/canvas-store'
@@ -216,8 +217,82 @@ function CanvasEditor(props: {
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState(props.project.name)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
 
   const canvasRef = useRef<HTMLDivElement>(null)
+
+  // 撤销/重做历史栈
+  interface CanvasSnapshot {
+    nodes: CanvasNode[]
+    connections: CanvasConnection[]
+  }
+  const historyRef = useRef<CanvasSnapshot[]>([])
+  const redoRef = useRef<CanvasSnapshot[]>([])
+  const historyLockRef = useRef(false)
+
+  const cloneSnapshot = (): CanvasSnapshot => ({
+    nodes: JSON.parse(JSON.stringify(nodes)) as CanvasNode[],
+    connections: JSON.parse(JSON.stringify(connections)) as CanvasConnection[],
+  })
+
+  /** 记录一次可撤销的变更（在修改前调用） */
+  const commitHistory = () => {
+    if (historyLockRef.current) return
+    historyRef.current.push(cloneSnapshot())
+    if (historyRef.current.length > 100) historyRef.current.shift()
+    redoRef.current = []
+    setCanUndo(true)
+    setCanRedo(false)
+  }
+
+  const handleUndo = () => {
+    const snapshot = historyRef.current.pop()
+    if (!snapshot) return
+    historyLockRef.current = true
+    redoRef.current.push(cloneSnapshot())
+    setNodes(snapshot.nodes)
+    setConnections(snapshot.connections)
+    setSelectedNodeId(null)
+    historyLockRef.current = false
+    setCanUndo(historyRef.current.length > 0)
+    setCanRedo(true)
+  }
+
+  const handleRedo = () => {
+    const snapshot = redoRef.current.pop()
+    if (!snapshot) return
+    historyLockRef.current = true
+    historyRef.current.push(cloneSnapshot())
+    setNodes(snapshot.nodes)
+    setConnections(snapshot.connections)
+    setSelectedNodeId(null)
+    historyLockRef.current = false
+    setCanRedo(redoRef.current.length > 0)
+    setCanUndo(true)
+  }
+
+  // 键盘快捷键：Ctrl+Z / Ctrl+Shift+Z
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement
+      if (target.closest('input, textarea, select')) return
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) {
+          handleRedo()
+        } else {
+          handleUndo()
+        }
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        event.preventDefault()
+        handleRedo()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, connections])
 
   // 同步到 store（防抖保存）
   useEffect(() => {
@@ -240,6 +315,7 @@ function CanvasEditor(props: {
   }
 
   const addNode = (type: CanvasNodeType) => {
+    commitHistory()
     const offset = 30 * (nodes.length % 5)
     const node = createNode(type, 80 + offset, 80 + offset)
     setNodes((prev) => [...prev, node])
@@ -252,6 +328,7 @@ function CanvasEditor(props: {
     if (!rect) return
     const files = extractImageFiles(e.dataTransfer.items)
     if (files.length === 0) return
+    commitHistory()
     const worldX = (e.clientX - rect.left - view.x) / view.zoom
     const worldY = (e.clientY - rect.top - view.y) / view.zoom
     void (async () => {
@@ -273,6 +350,7 @@ function CanvasEditor(props: {
     e.preventDefault()
     e.stopPropagation()
     setSelectedNodeId(node.id)
+    commitHistory()
     const startPointer = { x: e.clientX, y: e.clientY }
     const startNode = { x: node.x, y: node.y }
     const move = (ev: PointerEvent) => {
@@ -319,6 +397,7 @@ function CanvasEditor(props: {
   const handleResizeStart = (nodeId: string, corner: string, e: React.PointerEvent) => {
     const node = nodes.find((n) => n.id === nodeId)
     if (!node) return
+    commitHistory()
     const startPointer = { x: e.clientX, y: e.clientY }
     const startNode = { x: node.x, y: node.y, width: node.width, height: node.height }
 
@@ -536,8 +615,12 @@ function CanvasEditor(props: {
               connectingFrom={connectingFrom}
               onPointerDown={(e) => handleNodePointerDown(node, e)}
               onSelect={() => setSelectedNodeId(node.id)}
-              onUpdate={(patch) => updateConfigNode(node.id, patch)}
+              onUpdate={(patch) => {
+                commitHistory()
+                updateConfigNode(node.id, patch)
+              }}
               onDelete={() => {
+                commitHistory()
                 const result = deleteNode(nodes, connections, node.id)
                 setNodes(result.nodes)
                 setConnections(result.connections)
@@ -547,6 +630,7 @@ function CanvasEditor(props: {
               onStartConnect={() => setConnectingFrom(node.id)}
               onEndConnect={(targetId) => {
                 if (connectingFrom) {
+                  commitHistory()
                   const result = connectNodes(nodes, connections, connectingFrom, targetId)
                   setNodes(result.nodes)
                   setConnections(result.connections)
@@ -554,6 +638,8 @@ function CanvasEditor(props: {
                 setConnectingFrom(null)
               }}
               onUploadImage={async (files) => {
+                if (files.length === 0) return
+                commitHistory()
                 for (const file of files) {
                   const prepared = await prepareImageFile(file)
                   updateConfigNode(node.id, { content: prepared.dataUrl })
@@ -612,7 +698,7 @@ function CanvasEditor(props: {
         {/* 顶部中央：浮动工具条 */}
         <div
           data-canvas-no-zoom
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 rounded-2xl glass-surface px-2 py-1.5 shadow-lg"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 rounded-2xl glass-surface px-2 py-1.5 shadow-lg max-w-[calc(100%-2rem)] overflow-x-auto"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {/* 选择/抓手模式切换 */}
@@ -678,6 +764,28 @@ function CanvasEditor(props: {
             title={t('canvas.addConfigNode')}
           >
             <AppIcon name="sparkles" className="w-4 h-4" />
+          </button>
+
+          <div className="mx-1 h-5 w-px bg-[var(--glass-stroke-soft)]" />
+
+          {/* 撤销/重做 */}
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg disabled:opacity-40"
+            title={t('canvas.toolbar.undo')}
+          >
+            <AppIcon name="undo" className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg disabled:opacity-40"
+            title={t('canvas.toolbar.redo')}
+          >
+            <AppIcon name="redo" className="w-4 h-4" />
           </button>
 
           <div className="mx-1 h-5 w-px bg-[var(--glass-stroke-soft)]" />

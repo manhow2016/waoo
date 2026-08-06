@@ -38,14 +38,16 @@ export const TOKEN61_VIDEO_TEMPLATE: OpenAICompatMediaTemplate = {
   },
   response: {
     taskIdPath: '$.task_id',
-    statusPath: '$.status',
-    outputUrlPath: '$.video_url',
-    errorPath: '$.error.message',
+    // token61 状态接口返回 { code, message, data: { status, result_url, fail_reason } }
+    statusPath: '$.data.status',
+    outputUrlPath: '$.data.result_url',
+    errorPath: '$.data.fail_reason',
   },
   polling: {
     intervalMs: 3000,
     timeoutMs: 600000,
-    doneStates: ['completed', 'succeeded'],
+    // token61 状态值：IN_PROGRESS(生成中) / SUCCESS(完成) / FAILED(失败)
+    doneStates: ['success', 'succeeded', 'completed'],
     failStates: ['failed', 'error', 'canceled'],
   },
 }

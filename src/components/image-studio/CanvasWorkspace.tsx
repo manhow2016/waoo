@@ -209,17 +209,25 @@ function CanvasEditor(props: {
   const [connections, setConnections] = useState(props.project.connections)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 })
+  const [interactionMode, setInteractionMode] = useState<'select' | 'pan'>('select')
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState(props.project.name)
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
 
   const canvasRef = useRef<HTMLDivElement>(null)
 
   // 同步到 store（防抖保存）
   useEffect(() => {
+    setSaveStatus('saving')
     const timer = setTimeout(() => {
-      props.onUpdate((project) => ({ ...project, nodes, connections }))
+      try {
+        props.onUpdate((project) => ({ ...project, nodes, connections }))
+        setSaveStatus('saved')
+      } catch {
+        setSaveStatus('error')
+      }
     }, 400)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,8 +297,11 @@ function CanvasEditor(props: {
     setSelectedNodeId(null)
     setConnectingFrom(null)
     const start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
+    const shouldPan = interactionMode === 'pan' || e.button === 1
     const move = (ev: PointerEvent) => {
-      setView((prev) => ({ ...prev, x: start.vx + (ev.clientX - start.x), y: start.vy + (ev.clientY - start.y) }))
+      if (shouldPan) {
+        setView((prev) => ({ ...prev, x: start.vx + (ev.clientX - start.x), y: start.vy + (ev.clientY - start.y) }))
+      }
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
@@ -298,6 +309,17 @@ function CanvasEditor(props: {
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+  }
+
+  const handleResetView = () => {
+    setView({ x: 0, y: 0, zoom: 1 })
+  }
+
+  const handleZoom = (factor: number) => {
+    setView((prev) => {
+      const zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, prev.zoom * factor))
+      return { ...prev, zoom }
+    })
   }
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -406,58 +428,20 @@ function CanvasEditor(props: {
 
   return (
     <div className="space-y-4">
-      {/* 工具栏 */}
-      <div className="glass-surface rounded-2xl p-3 flex items-center gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={props.onBack}
-          className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
-          title={t('canvas.back')}
-        >
-          <AppIcon name="chevronLeft" className="w-4 h-4" />
-        </button>
-        <form onSubmit={handleRename} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="glass-input-base px-3 py-1.5 text-sm w-40"
-          />
-        </form>
-        <div className="flex-1" />
-        <button type="button" onClick={() => addNode('text')} className="glass-btn-base glass-btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5">
-          <AppIcon name="fileText" className="w-3.5 h-3.5" />
-          {t('canvas.addTextNode')}
-        </button>
-        <button type="button" onClick={() => addNode('image')} className="glass-btn-base glass-btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5">
-          <AppIcon name="image" className="w-3.5 h-3.5" />
-          {t('canvas.addImageNode')}
-        </button>
-        <button type="button" onClick={() => addNode('config')} className="glass-btn-base glass-btn-tone-info px-3 py-1.5 text-xs flex items-center gap-1.5">
-          <AppIcon name="sparkles" className="w-3.5 h-3.5" />
-          {t('canvas.addConfigNode')}
-        </button>
-        <div className="flex items-center gap-1 text-xs text-[var(--glass-text-tertiary)]">
-          <button type="button" onClick={() => setView((prev) => ({ ...prev, zoom: Math.max(ZOOM_MIN, prev.zoom * 0.9) }))} className="glass-btn-base glass-btn-ghost px-2 py-1">-</button>
-          <span>{Math.round(view.zoom * 100)}%</span>
-          <button type="button" onClick={() => setView((prev) => ({ ...prev, zoom: Math.min(ZOOM_MAX, prev.zoom * 1.1) }))} className="glass-btn-base glass-btn-ghost px-2 py-1">+</button>
-        </div>
-      </div>
-
       {error && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
           {error}
         </div>
       )}
 
-      {/* 画布 */}
+      {/* 画布（接近全屏，工具条/头部/缩放均为浮动覆盖层） */}
       <div
         ref={canvasRef}
         onWheel={handleWheel}
         onPointerDown={handleBackgroundPointerDown}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropOnCanvas}
-        className="relative h-[calc(100vh-260px)] min-h-[480px] rounded-2xl overflow-hidden border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-muted)]/20"
+        className="relative h-[calc(100vh-260px)] min-h-[560px] rounded-2xl overflow-hidden border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-muted)]/20"
         style={{ touchAction: 'none' }}
       >
         {/* 网格背景 */}
@@ -526,10 +510,173 @@ function CanvasEditor(props: {
           ))}
         </div>
 
+        {/* 空画布提示 */}
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-sm text-[var(--glass-text-tertiary)]">{t('canvas.canvasEmpty')}</p>
+          </div>
+        )}
+
+        {/* 左上角：返回 + 标题 + 保存状态 */}
+        <div
+          data-canvas-no-zoom
+          className="absolute top-4 left-4 z-50 flex items-center gap-2"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={props.onBack}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
+            title={t('canvas.back')}
+          >
+            <AppIcon name="chevronLeft" className="w-4 h-4" />
+          </button>
+          <form onSubmit={handleRename} className="flex items-center">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="glass-input-base px-3 py-1.5 text-sm w-44"
+            />
+          </form>
+          <span className="flex items-center gap-1 text-[11px] text-[var(--glass-text-tertiary)]">
+            {saveStatus === 'saving' ? (
+              <StudioSpinner className="w-3 h-3" />
+            ) : saveStatus === 'error' ? (
+              <AppIcon name="alert" className="w-3 h-3 text-[var(--glass-tone-danger-fg)]" />
+            ) : (
+              <AppIcon name="check" className="w-3 h-3 text-[var(--glass-tone-success-fg)]" />
+            )}
+            {saveStatus === 'saving'
+              ? t('canvas.saveStatus.saving')
+              : saveStatus === 'error'
+                ? t('canvas.saveStatus.error')
+                : t('canvas.saveStatus.saved')}
+          </span>
+        </div>
+
+        {/* 顶部中央：浮动工具条 */}
+        <div
+          data-canvas-no-zoom
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 rounded-2xl glass-surface px-2 py-1.5 shadow-lg"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {/* 选择/抓手模式切换 */}
+          <div className="inline-flex rounded-xl p-0.5 bg-[var(--glass-bg-muted)] gap-0.5 mr-1">
+            <button
+              type="button"
+              onClick={() => setInteractionMode('select')}
+              title={t('canvas.toolbar.selectMode')}
+              className={cx(
+                'px-2 py-1.5 rounded-lg transition-all',
+                interactionMode === 'select'
+                  ? 'bg-[var(--glass-bg-surface-strong)] text-[var(--glass-text-primary)] shadow-sm'
+                  : 'text-[var(--glass-text-secondary)]',
+              )}
+            >
+              <AppIcon name="copy" className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setInteractionMode('pan')}
+              title={t('canvas.toolbar.panMode')}
+              className={cx(
+                'px-2 py-1.5 rounded-lg transition-all',
+                interactionMode === 'pan'
+                  ? 'bg-[var(--glass-bg-surface-strong)] text-[var(--glass-text-primary)] shadow-sm'
+                  : 'text-[var(--glass-text-secondary)]',
+              )}
+            >
+              <AppIcon name="move" className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="mx-1 h-5 w-px bg-[var(--glass-stroke-soft)]" />
+
+          <button
+            type="button"
+            onClick={() => addNode('image')}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
+            title={t('canvas.addImageNode')}
+          >
+            <AppIcon name="image" className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => addNode('text')}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
+            title={t('canvas.addTextNode')}
+          >
+            <AppIcon name="fileText" className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => addNode('textAnnotation')}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
+            title={t('canvas.addAnnotationNode')}
+          >
+            <AppIcon name="edit" className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => addNode('config')}
+            className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
+            title={t('canvas.addConfigNode')}
+          >
+            <AppIcon name="sparkles" className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 右下角：缩放控制 */}
+        <div
+          data-canvas-no-zoom
+          className="absolute bottom-4 right-4 z-50 flex items-center gap-1 rounded-xl glass-surface px-2 py-1.5 shadow-lg"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => handleZoom(0.9)}
+            className="glass-btn-base glass-btn-ghost px-2 py-1"
+            title={t('canvas.toolbar.zoomOut')}
+          >
+            <AppIcon name="minus" className="w-3.5 h-3.5" />
+          </button>
+          <input
+            type="range"
+            min={ZOOM_MIN * 100}
+            max={ZOOM_MAX * 100}
+            step={1}
+            value={Math.round(view.zoom * 100)}
+            onChange={(e) => setView((prev) => ({ ...prev, zoom: Number(e.target.value) / 100 }))}
+            className="w-24 accent-[var(--glass-tone-info-fg)]"
+            aria-label={t('canvas.toolbar.zoomOut')}
+          />
+          <span className="w-10 text-right text-xs tabular-nums text-[var(--glass-text-secondary)]">
+            {Math.round(view.zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => handleZoom(1.1)}
+            className="glass-btn-base glass-btn-ghost px-2 py-1"
+            title={t('canvas.toolbar.zoomIn')}
+          >
+            <AppIcon name="plus" className="w-3.5 h-3.5" />
+          </button>
+          <div className="mx-1 h-5 w-px bg-[var(--glass-stroke-soft)]" />
+          <button
+            type="button"
+            onClick={handleResetView}
+            className="glass-btn-base glass-btn-ghost px-2 py-1"
+            title={t('canvas.toolbar.resetView')}
+          >
+            <AppIcon name="focus" className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
         {/* 连线提示 */}
         {connectingFrom && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 glass-chip glass-chip-info px-3 py-1.5 text-xs">
-            点击另一个节点完成连线
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 glass-chip glass-chip-info px-3 py-1.5 text-xs z-50">
+            {t('canvas.connectHint')}
           </div>
         )}
       </div>
@@ -577,8 +724,9 @@ function CanvasNodeView(props: {
       onClick={props.onSelect}
     >
       {/* 头部 */}
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--glass-stroke-soft)]">
-        <span className="text-[10px] font-medium text-[var(--glass-text-tertiary)] uppercase">
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--glass-stroke-soft)] cursor-grab">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-[var(--glass-text-tertiary)] uppercase">
+          <NodeTypeIcon type={props.node.type} />
           {nodeTypeLabel(props.node.type)}
         </span>
         <div className="flex items-center gap-1">
@@ -697,6 +845,16 @@ function nodeTypeLabel(type: CanvasNodeType): string {
     textAnnotation: 'Note',
   }
   return labels[type]
+}
+
+function NodeTypeIcon(props: { type: CanvasNodeType }) {
+  const icons: Record<CanvasNodeType, string> = {
+    image: 'image',
+    text: 'fileText',
+    config: 'sparkles',
+    textAnnotation: 'edit',
+  }
+  return <AppIcon name={icons[props.type] as never} className="w-3 h-3" />
 }
 
 function ConfigNodeBody(props: {

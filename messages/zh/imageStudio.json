@@ -77,6 +77,26 @@
     "addTextNode": "添加文字节点",
     "addImageNode": "添加图片节点",
     "addConfigNode": "添加生成配置节点",
+    "addAnnotationNode": "添加注释节点",
+    "saveStatus": {
+      "saving": "保存中…",
+      "saved": "已保存",
+      "error": "保存失败"
+    },
+    "toolbar": {
+      "selectMode": "选择模式",
+      "panMode": "抓手模式",
+      "connect": "连接",
+      "delete": "删除",
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "resetView": "重置视图",
+      "undo": "撤销",
+      "redo": "重做"
+    },
+    "zoomPercent": "{value}%",
+    "canvasEmpty": "从上方工具条添加节点，或拖入图片开始创作",
+    "connectHint": "点击另一个节点完成连线",
     "node": {
       "image": "图片",
       "text": "文字",

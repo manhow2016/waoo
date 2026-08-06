@@ -77,6 +77,26 @@
     "addTextNode": "Add Text Node",
     "addImageNode": "Add Image Node",
     "addConfigNode": "Add Config Node",
+    "addAnnotationNode": "Add Note Node",
+    "saveStatus": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "error": "Save failed"
+    },
+    "toolbar": {
+      "selectMode": "Select mode",
+      "panMode": "Pan mode",
+      "connect": "Connect",
+      "delete": "Delete",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "resetView": "Reset view",
+      "undo": "Undo",
+      "redo": "Redo"
+    },
+    "zoomPercent": "{value}%",
+    "canvasEmpty": "Add nodes from the toolbar above, or drop an image to start",
+    "connectHint": "Click another node to complete the connection",
     "node": {
       "image": "Image",
       "text": "Text",

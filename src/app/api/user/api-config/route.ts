@@ -951,13 +951,17 @@ function validateModelProviderConsistency(models: StoredModel[], providers: Stor
 }
 
 function validateModelProviderTypeSupport(models: StoredModel[], providers: StoredProvider[]) {
+  // lipsync 能力仅由以下 provider 承载：fal / vidu / bailian 原生，
+  // 以及 token61（NEW-API 中转站，可代理 fal/vidu 的 lipsync 接口）。
+  const LIPSYNC_PROVIDER_KEYS = new Set(['fal', 'vidu', 'bailian', 'token61'])
+
   for (let index = 0; index < models.length; index += 1) {
     const model = models[index]
     const matchedProvider = resolveProviderByIdOrKey(providers, model.provider)
     if (!matchedProvider) continue
 
     const providerKey = getProviderKey(matchedProvider.id)
-    if (model.type === 'lipsync' && providerKey !== 'fal' && providerKey !== 'vidu' && providerKey !== 'bailian') {
+    if (model.type === 'lipsync' && !LIPSYNC_PROVIDER_KEYS.has(providerKey)) {
       throw new ApiError('INVALID_PARAMS', {
         code: 'MODEL_PROVIDER_TYPE_UNSUPPORTED',
         field: `models[${index}].provider`,

@@ -50,19 +50,20 @@ export default function Navbar() {
                   {t('home')}
                 </Link>
                 <Link
-                  href={{ pathname: '/workspace/asset-hub' }}
-                  className='text-sm text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)] font-medium transition-colors flex items-center gap-1'
-                >
-                  <AppIcon name='folderHeart' className='w-4 h-4' />
-                  {t('assetHub')}
-                </Link>
-                <Link
                   href={{ pathname: '/image-studio' }}
                   className='text-sm text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)] font-medium transition-colors flex items-center gap-1'
                 >
                   <AppIcon name='sparkles' className='w-4 h-4' />
                   {t('imageStudio')}
                 </Link>
+                <Link
+                  href={{ pathname: '/workspace/asset-hub' }}
+                  className='text-sm text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)] font-medium transition-colors flex items-center gap-1'
+                >
+                  <AppIcon name='folderHeart' className='w-4 h-4' />
+                  {t('assetHub')}
+                </Link>
+
                 <Link
                   href={{ pathname: '/profile' }}
                   className='text-sm text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)] font-medium transition-colors flex items-center gap-1'

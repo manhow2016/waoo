@@ -136,6 +136,10 @@ export async function generateImage(
             }
             // 移除不支持的 aspectRatio
             delete openaiCompatOptions.aspectRatio
+            // openai-compat 的 resolution 需为具体像素尺寸（如 1024x1024），
+            // 档位值（如 1K/2K/4K）与 size 冲突，且已由 aspectRatio 映射为 size，
+            // 这里统一移除避免 OPENAI_COMPAT_IMAGE_OPTION_CONFLICT。
+            delete openaiCompatOptions.resolution
         }
 
         return await generateImageViaOpenAICompat({

@@ -8,29 +8,7 @@
   "viewAll": "查看全部项目",
   "noProjects": "还没有项目，从上方开始你的第一个创作吧",
   "tabCreation": "快速创作",
-  "tabAiImage": "AI图片",
   "tabProjects": "项目管理",
-  "aiImage": {
-    "title": "AI 图片工具",
-    "subtitle": "强大的 AI 图片生成与编辑工具集",
-    "hint": "提示：AI 图片工具已深度集成到 waoowaoo，模型配置与项目设置中心统一。",
-    "workbench": {
-      "title": "生图工作台",
-      "description": "文生图、图生图，支持多种模型和参数调节"
-    },
-    "canvas": {
-      "title": "无限画布",
-      "description": "自由创作空间，支持节点式图片生成与编辑"
-    },
-    "reversePrompt": {
-      "title": "反推提示词",
-      "description": "上传图片，AI 自动分析并生成提示词"
-    },
-    "gif": {
-      "title": "动图生成",
-      "description": "将多张图片合成为 GIF 动图"
-    }
-  },
   "ago": {
     "justNow": "刚刚",
     "minutesAgo": "{n}分钟前",

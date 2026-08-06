@@ -8,29 +8,7 @@
   "viewAll": "View All Projects",
   "noProjects": "No projects yet. Start your first creation from above!",
   "tabCreation": "Quick Create",
-  "tabAiImage": "AI Image",
   "tabProjects": "Project Management",
-  "aiImage": {
-    "title": "AI Image Tools",
-    "subtitle": "Powerful AI image generation and editing toolkit",
-    "hint": "Note: AI Image tools are deeply integrated into waoowaoo, sharing the unified model configuration with the Settings center.",
-    "workbench": {
-      "title": "Image Workbench",
-      "description": "Text-to-image, image-to-image with multiple models and parameters"
-    },
-    "canvas": {
-      "title": "Infinite Canvas",
-      "description": "Free creative space with node-based image generation and editing"
-    },
-    "reversePrompt": {
-      "title": "Reverse Prompt",
-      "description": "Upload images and let AI analyze and generate prompts"
-    },
-    "gif": {
-      "title": "GIF Generator",
-      "description": "Combine multiple images into animated GIFs"
-    }
-  },
   "ago": {
     "justNow": "Just now",
     "minutesAgo": "{n}m ago",

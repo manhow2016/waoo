@@ -261,14 +261,16 @@ function CanvasEditor(props: {
 
   const handleNodePointerDown = (node: CanvasNode, e: React.PointerEvent) => {
     if (e.button === 2) return
+    e.preventDefault()
     e.stopPropagation()
     setSelectedNodeId(node.id)
-    const start = { x: e.clientX, y: e.clientY }
+    const startPointer = { x: e.clientX, y: e.clientY }
+    const startNode = { x: node.x, y: node.y }
     const move = (ev: PointerEvent) => {
-      const dx = (ev.clientX - start.x) / view.zoom
-      const dy = (ev.clientY - start.y) / view.zoom
+      const dx = (ev.clientX - startPointer.x) / view.zoom
+      const dy = (ev.clientY - startPointer.y) / view.zoom
       setNodes((prev) =>
-        prev.map((n) => (n.id === node.id ? { ...n, x: node.x + dx, y: node.y + dy } : n)),
+        prev.map((n) => (n.id === node.id ? { ...n, x: startNode.x + dx, y: startNode.y + dy } : n)),
       )
     }
     const up = () => {
@@ -280,7 +282,10 @@ function CanvasEditor(props: {
   }
 
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
-    if (e.target !== e.currentTarget) return
+    // 仅当点击画布空白区域（非节点、非输入控件）时启动平移
+    const target = e.target as HTMLElement
+    if (target.closest('[data-node-id]')) return
+    if (target.closest('input, textarea, select, button, a')) return
     setSelectedNodeId(null)
     setConnectingFrom(null)
     const start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
@@ -296,6 +301,7 @@ function CanvasEditor(props: {
   }
 
   const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
     if (!canvasRef.current) return
     const rect = canvasRef.current.getBoundingClientRect()
     const factor = e.deltaY < 0 ? 1.1 : 0.9
@@ -553,6 +559,7 @@ function CanvasNodeView(props: {
 
   return (
     <div
+      data-node-id={props.node.id}
       className={cx(
         'absolute rounded-xl border-2 bg-[var(--glass-bg-surface-strong)] shadow-md',
         props.selected ? 'border-[var(--glass-tone-info-fg)]' : 'border-[var(--glass-stroke-soft)]',

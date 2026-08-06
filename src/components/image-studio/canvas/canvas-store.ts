@@ -1,13 +1,20 @@
 /**
- * 无限画布状态存储（zustand + localStorage 持久化）
+ * 无限画布状态存储（zustand + IndexedDB 持久化）
  *
  * 移植自 nova-image-studio 的 use-canvas-store，适配 waoowaoo 模型配置。
+ * 使用 localforage（IndexedDB）持久化，避免图片 data URL 超出 localStorage 容量限制。
  */
 
 'use client'
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import localforage from 'localforage'
+
+const canvasStorage = localforage.createInstance({
+  name: 'waoowaoo-image-studio',
+  storeName: 'canvas-projects',
+})
 
 export type CanvasNodeType = 'image' | 'text' | 'config' | 'textAnnotation'
 
@@ -287,6 +294,7 @@ export const useCanvasStore = create<CanvasStore>()(
     }),
     {
       name: 'waoowaoo-image-studio-canvas-store',
+      storage: createJSONStorage(() => canvasStorage),
     },
   ),
 )

@@ -13,7 +13,7 @@
   "aiImage": {
     "title": "AI Image Tools",
     "subtitle": "Powerful AI image generation and editing toolkit",
-    "hint": "Note: AI Image tools are powered by nova-image-studio. You may need to configure API keys for first use.",
+    "hint": "Note: AI Image tools are deeply integrated into waoowaoo, sharing the unified model configuration with the Settings center.",
     "workbench": {
       "title": "Image Workbench",
       "description": "Text-to-image, image-to-image with multiple models and parameters"

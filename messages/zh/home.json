@@ -13,7 +13,7 @@
   "aiImage": {
     "title": "AI 图片工具",
     "subtitle": "强大的 AI 图片生成与编辑工具集",
-    "hint": "提示：AI 图片工具由 nova-image-studio 提供支持，首次使用可能需要配置 API 密钥。",
+    "hint": "提示：AI 图片工具已深度集成到 waoowaoo，模型配置与项目设置中心统一。",
     "workbench": {
       "title": "生图工作台",
       "description": "文生图、图生图，支持多种模型和参数调节"

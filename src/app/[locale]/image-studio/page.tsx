@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Navbar from '@/components/Navbar'
 import { AppIcon } from '@/components/ui/icons'
@@ -19,9 +20,31 @@ const TAB_DEFS: Array<{ key: StudioTab; icon: string }> = [
   { key: 'gif', icon: 'play' },
 ]
 
+const VALID_TABS = new Set<string>(TAB_DEFS.map((def) => def.key))
+
+function normalizeTab(value: string | null): StudioTab {
+  return value && VALID_TABS.has(value) ? (value as StudioTab) : 'workbench'
+}
+
+function readTabParam(searchParams: URLSearchParams | null): StudioTab {
+  return normalizeTab(searchParams?.get('tab') ?? null)
+}
+
 export default function ImageStudioPage() {
   const t = useTranslations('imageStudio')
-  const [tab, setTab] = useState<StudioTab>('workbench')
+  const searchParams = useSearchParams()
+  const [tab, setTab] = useState<StudioTab>(() => readTabParam(searchParams))
+
+  useEffect(() => {
+    setTab(readTabParam(searchParams))
+  }, [searchParams])
+
+  const handleTabChange = (key: StudioTab) => {
+    setTab(key)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', key)
+    window.history.replaceState(null, '', url)
+  }
 
   return (
     <div className="glass-page min-h-screen">
@@ -42,7 +65,7 @@ export default function ImageStudioPage() {
               <button
                 key={def.key}
                 type="button"
-                onClick={() => setTab(def.key)}
+                onClick={() => handleTabChange(def.key)}
                 className={cx(
                   'px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all',
                   active

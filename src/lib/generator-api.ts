@@ -16,6 +16,7 @@ import {
     generateImageViaOpenAICompatTemplate,
     generateVideoViaOpenAICompat,
     generateVideoViaOpenAICompatTemplate,
+    isCompatibleProvider,
     resolveModelGatewayRoute,
 } from './model-gateway'
 import { generateBailianAudio, generateBailianImage, generateBailianVideo } from './providers/bailian'
@@ -105,7 +106,9 @@ export async function generateImage(
     const { referenceImages, ...generatorOptions } = options || {}
     if (gatewayRoute === 'openai-compat') {
         const compatTemplate = selection.compatMediaTemplate
-        if (providerKey === 'openai-compatible' && !compatTemplate) {
+        if (isCompatibleProvider(selection.provider) && !compatTemplate) {
+            // OpenAI 兼容中转（openai-compatible / token61）的媒体模型必须配置
+            // compatMediaTemplate，否则无法确定调用格式，直接报错避免静默失败。
             throw new Error(`MODEL_COMPAT_MEDIA_TEMPLATE_REQUIRED: ${selection.modelKey}`)
         }
         if (compatTemplate) {
@@ -233,7 +236,10 @@ export async function generateVideo(
     const { prompt, ...providerOptions } = options || {}
     if (gatewayRoute === 'openai-compat') {
         const compatTemplate = selection.compatMediaTemplate
-        if (providerKey === 'openai-compatible' && !compatTemplate) {
+        if (isCompatibleProvider(selection.provider) && !compatTemplate) {
+            // OpenAI 兼容中转（openai-compatible / token61）的视频模型必须配置
+            // compatMediaTemplate：这些网关不支持 OpenAI 标准 /videos SDK 端点，
+            // 未配置模板时无法生成，直接报错避免任务静默卡在「生成中」。
             throw new Error(`MODEL_COMPAT_MEDIA_TEMPLATE_REQUIRED: ${selection.modelKey}`)
         }
         if (compatTemplate) {

@@ -575,15 +575,9 @@ function CanvasEditor(props: {
       >
         {/* 背景（网格/圆点/空白，随缩放同步） */}
         {backgroundMode !== 'blank' && (
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage: backgroundMode === 'dots'
-                ? 'radial-gradient(circle, var(--glass-stroke-soft) 1.2px, transparent 1.4px)'
-                : 'linear-gradient(var(--glass-stroke-soft) 1px, transparent 1px), linear-gradient(90deg, var(--glass-stroke-soft) 1px, transparent 1px)',
-              backgroundSize: `${48 * view.zoom}px ${48 * view.zoom}px`,
-              backgroundPosition: `${view.x % (48 * view.zoom)}px ${view.y % (48 * view.zoom)}px`,
-            }}
+          <CanvasBackground
+            mode={backgroundMode}
+            view={view}
           />
         )}
 
@@ -1127,6 +1121,26 @@ function nodeTypeLabel(type: CanvasNodeType): string {
     textAnnotation: 'Note',
   }
   return labels[type]
+}
+
+/** 画布背景（网格/圆点），随视口偏移与缩放同步 */
+function CanvasBackground(props: { mode: 'lines' | 'dots'; view: { x: number; y: number; zoom: number } }) {
+  const size = 48 * props.view.zoom
+  const offsetX = ((props.view.x % size) + size) % size
+  const offsetY = ((props.view.y % size) + size) % size
+
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        backgroundImage: props.mode === 'dots'
+          ? 'radial-gradient(circle, color-mix(in srgb, var(--muted-foreground) 30%, transparent) 1.2px, transparent 1.4px)'
+          : 'linear-gradient(color-mix(in srgb, var(--muted-foreground) 16%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--muted-foreground) 16%, transparent) 1px, transparent 1px)',
+        backgroundSize: `${size}px ${size}px`,
+        backgroundPosition: `${offsetX}px ${offsetY}px`,
+      }}
+    />
+  )
 }
 
 function NodeTypeIcon(props: { type: CanvasNodeType }) {

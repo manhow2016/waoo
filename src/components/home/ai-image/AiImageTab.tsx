@@ -78,11 +78,11 @@ export default function AiImageTab() {
   // 如果选中了功能，显示 iframe
   if (activeFeature) {
     return (
-      <div className="relative w-[95%] h-[calc(100vh-200px)] min-h-[600px] mx-auto">
+      <div className="relative w-full h-[calc(100vh-200px)] min-h-[600px] mx-auto">
         {/* iframe */}
         <iframe
           src={buildIframeUrl(activeFeature)}
-          className="w-full h-full border-0 rounded-xl"
+          className="w-[95%] h-full border-0 rounded-xl mx-auto"
           title={t(`aiImage.${activeFeature}.title`)}
           allow="clipboard-read; clipboard-write"
         />

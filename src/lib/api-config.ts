@@ -106,6 +106,14 @@ function isGatewayRoute(value: unknown): value is GatewayRouteType {
   return value === 'official' || value === 'openai-compat'
 }
 
+/**
+ * 兼容 OpenAI 协议的中转 provider（与 model-gateway/router.ts 保持一致）。
+ * token61 是 NEW-API 中转站，走 openai-compat 路由。
+ */
+function isOpenAICompatibleProviderKey(providerKey: string): boolean {
+  return providerKey === 'openai-compatible' || providerKey === 'token61'
+}
+
 function isLlmProtocol(value: unknown): value is LlmProtocolType {
   return value === 'responses' || value === 'chat-completions'
 }
@@ -169,9 +177,9 @@ function parseCustomProviders(rawProviders: string | null | undefined): CustomPr
       gatewayRoute = undefined
     } else if (!isGatewayRoute(gatewayRouteRaw)) {
       throw new Error(`PROVIDER_GATEWAY_ROUTE_INVALID: providers[${index}].gatewayRoute`)
-    } else if (providerKey === 'openai-compatible' && gatewayRouteRaw === 'official') {
+    } else if (isOpenAICompatibleProviderKey(providerKey) && gatewayRouteRaw === 'official') {
       throw new Error(`PROVIDER_GATEWAY_ROUTE_INVALID: providers[${index}].gatewayRoute`)
-    } else if (providerKey !== 'openai-compatible' && gatewayRouteRaw === 'openai-compat') {
+    } else if (!isOpenAICompatibleProviderKey(providerKey) && gatewayRouteRaw === 'openai-compat') {
       throw new Error(`PROVIDER_GATEWAY_ROUTE_INVALID: providers[${index}].gatewayRoute`)
     } else {
       gatewayRoute = gatewayRouteRaw
@@ -334,10 +342,10 @@ export async function resolveModelSelection(
   }
 
   const providerKey = getProviderKey(exact.provider).toLowerCase()
-  const llmProtocol = mediaType === 'llm' && providerKey === 'openai-compatible'
+  const llmProtocol = mediaType === 'llm' && isOpenAICompatibleProviderKey(providerKey)
     ? (exact.llmProtocol || 'chat-completions')
     : undefined
-  const compatMediaTemplate = (mediaType === 'image' || mediaType === 'video') && providerKey === 'openai-compatible'
+  const compatMediaTemplate = (mediaType === 'image' || mediaType === 'video') && isOpenAICompatibleProviderKey(providerKey)
     ? exact.compatMediaTemplate
     : undefined
 
@@ -365,10 +373,10 @@ async function resolveSingleModelSelection(
 
   const model = models[0]
   const providerKey = getProviderKey(model.provider).toLowerCase()
-  const llmProtocol = mediaType === 'llm' && providerKey === 'openai-compatible'
+  const llmProtocol = mediaType === 'llm' && isOpenAICompatibleProviderKey(providerKey)
     ? (model.llmProtocol || 'chat-completions')
     : undefined
-  const compatMediaTemplate = (mediaType === 'image' || mediaType === 'video') && providerKey === 'openai-compatible'
+  const compatMediaTemplate = (mediaType === 'image' || mediaType === 'video') && isOpenAICompatibleProviderKey(providerKey)
     ? model.compatMediaTemplate
     : undefined
 

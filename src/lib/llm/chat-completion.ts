@@ -3,6 +3,7 @@ import { generateText, type ModelMessage } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { GoogleGenAI } from '@google/genai'
 import {
+  isCompatibleProvider,
   resolveModelGatewayRoute,
   runOpenAICompatChatCompletion,
   runOpenAICompatResponsesCompletion,
@@ -114,9 +115,10 @@ export async function chatCompletion(
     const attemptStartedAt = Date.now()
     try {
       if (gatewayRoute === 'openai-compat') {
-        // openai-compatible protocol probing only applies to openai-compatible + llm.
-        // gemini-compatible is explicitly excluded and must not enter this branch.
-        if (providerKey !== 'openai-compatible') {
+        // openai-compatible protocol probing applies to compatible providers
+        // (openai-compatible + token61 NEW-API relay). gemini-compatible is
+        // explicitly excluded and must not enter this branch.
+        if (!isCompatibleProvider(provider)) {
           throw new Error(`OPENAI_COMPAT_PROVIDER_UNSUPPORTED: ${provider}`)
         }
         if (!selection.llmProtocol) {

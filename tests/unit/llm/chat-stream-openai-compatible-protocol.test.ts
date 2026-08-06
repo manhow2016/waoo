@@ -55,6 +55,7 @@ const recordCompletionUsageMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/model-gateway', () => ({
   resolveModelGatewayRoute: vi.fn(() => 'openai-compat'),
+  isCompatibleProvider: vi.fn((providerId: string) => providerId.split(':')[0] === 'openai-compatible'),
   runOpenAICompatChatCompletion: runOpenAICompatChatCompletionMock,
   runOpenAICompatResponsesCompletion: runOpenAICompatResponsesCompletionMock,
 }))

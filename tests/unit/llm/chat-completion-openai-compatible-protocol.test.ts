@@ -59,6 +59,7 @@ vi.mock('@/lib/llm-observe/internal-stream-context', () => ({
 
 vi.mock('@/lib/model-gateway', () => ({
   resolveModelGatewayRoute: vi.fn(() => 'openai-compat'),
+  isCompatibleProvider: vi.fn((providerId: string) => providerId.split(':')[0] === 'openai-compatible'),
   runOpenAICompatChatCompletion: runOpenAICompatChatCompletionMock,
   runOpenAICompatResponsesCompletion: runOpenAICompatResponsesCompletionMock,
 }))

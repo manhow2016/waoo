@@ -18,7 +18,7 @@ import type {
   OpenAICompatMediaTemplate,
   OpenAICompatMediaTemplateSource,
 } from './openai-compat-media-template'
-import { TOKEN61_VIDEO_TEMPLATE, TOKEN61_PROVIDER_KEY } from './model-gateway/openai-compat/token61-templates'
+import { TOKEN61_PROVIDER_KEY, resolveToken61MediaTemplate } from './model-gateway/openai-compat/token61-templates'
 import { validateOpenAICompatMediaTemplate } from './user-api/model-template/validator'
 
 export interface CustomModel {
@@ -118,19 +118,18 @@ function isOpenAICompatibleProviderKey(providerKey: string): boolean {
 /**
  * 解析媒体模型的 compatMediaTemplate：
  * - 用户显式配置的模板优先使用
- * - token61 视频模型未配置模板时，自动回退到内置模板（适配其
- *   POST /v1/video/generations + GET /v1/video/generations/{task_id} 接口）
+ * - token61 媒体模型未配置模板时，自动回退到内置模板
+ *   （视频：适配 POST /v1/video/generations 接口；图像：OpenAI 兼容 generations）
  */
 function resolveCompatMediaTemplateForProvider(
   providerKey: string,
   mediaType: 'image' | 'video',
   userTemplate: OpenAICompatMediaTemplate | undefined,
 ): OpenAICompatMediaTemplate | undefined {
-  if (userTemplate) return userTemplate
-  if (providerKey === TOKEN61_PROVIDER_KEY && mediaType === 'video') {
-    return TOKEN61_VIDEO_TEMPLATE
+  if (providerKey === TOKEN61_PROVIDER_KEY) {
+    return resolveToken61MediaTemplate({ mediaType, userTemplate })
   }
-  return undefined
+  return userTemplate
 }
 
 function isLlmProtocol(value: unknown): value is LlmProtocolType {

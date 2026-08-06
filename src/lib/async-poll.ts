@@ -328,7 +328,7 @@ async function pollOCompatTask(
     if (!model) {
         throw new Error(`OCOMPAT_TEMPLATE_NOT_FOUND: ${modelKey}`)
     }
-    // token61 视频模型未显式配置模板时，回退到内置模板
+    // token61 视频模型未显式配置模板时，回退到内置模板（仅异步任务需要轮询）
     const template = model.compatMediaTemplate
       || (model.provider && getProviderKey(model.provider) === TOKEN61_PROVIDER_KEY
         ? TOKEN61_VIDEO_TEMPLATE

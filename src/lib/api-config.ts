@@ -18,6 +18,7 @@ import type {
   OpenAICompatMediaTemplate,
   OpenAICompatMediaTemplateSource,
 } from './openai-compat-media-template'
+import { TOKEN61_VIDEO_TEMPLATE, TOKEN61_PROVIDER_KEY } from './model-gateway/openai-compat/token61-templates'
 import { validateOpenAICompatMediaTemplate } from './user-api/model-template/validator'
 
 export interface CustomModel {
@@ -112,6 +113,24 @@ function isGatewayRoute(value: unknown): value is GatewayRouteType {
  */
 function isOpenAICompatibleProviderKey(providerKey: string): boolean {
   return providerKey === 'openai-compatible' || providerKey === 'token61'
+}
+
+/**
+ * 解析媒体模型的 compatMediaTemplate：
+ * - 用户显式配置的模板优先使用
+ * - token61 视频模型未配置模板时，自动回退到内置模板（适配其
+ *   POST /v1/video/generations + GET /v1/video/generations/{task_id} 接口）
+ */
+function resolveCompatMediaTemplateForProvider(
+  providerKey: string,
+  mediaType: 'image' | 'video',
+  userTemplate: OpenAICompatMediaTemplate | undefined,
+): OpenAICompatMediaTemplate | undefined {
+  if (userTemplate) return userTemplate
+  if (providerKey === TOKEN61_PROVIDER_KEY && mediaType === 'video') {
+    return TOKEN61_VIDEO_TEMPLATE
+  }
+  return undefined
 }
 
 function isLlmProtocol(value: unknown): value is LlmProtocolType {
@@ -346,7 +365,7 @@ export async function resolveModelSelection(
     ? (exact.llmProtocol || 'chat-completions')
     : undefined
   const compatMediaTemplate = (mediaType === 'image' || mediaType === 'video') && isOpenAICompatibleProviderKey(providerKey)
-    ? exact.compatMediaTemplate
+    ? resolveCompatMediaTemplateForProvider(providerKey, mediaType, exact.compatMediaTemplate)
     : undefined
 
   return {
@@ -377,7 +396,7 @@ async function resolveSingleModelSelection(
     ? (model.llmProtocol || 'chat-completions')
     : undefined
   const compatMediaTemplate = (mediaType === 'image' || mediaType === 'video') && isOpenAICompatibleProviderKey(providerKey)
-    ? model.compatMediaTemplate
+    ? resolveCompatMediaTemplateForProvider(providerKey, mediaType, model.compatMediaTemplate)
     : undefined
 
   return {

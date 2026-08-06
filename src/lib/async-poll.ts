@@ -18,8 +18,9 @@ import { logInfo as _ulogInfo, logError as _ulogError } from '@/lib/logging/core
 
 import { queryFalStatus } from './async-submit'
 import { queryGeminiBatchStatus, querySeedanceVideoStatus, queryGoogleVideoStatus } from './async-task-utils'
-import { getProviderConfig, getUserModels } from './api-config'
+import { getProviderConfig, getProviderKey, getUserModels } from './api-config'
 import { buildRenderedTemplateRequest, buildTemplateVariables, normalizeResponseJson, readJsonPath } from './openai-compat-template-runtime'
+import { TOKEN61_PROVIDER_KEY, TOKEN61_VIDEO_TEMPLATE } from './model-gateway/openai-compat/token61-templates'
 import { composeModelKey } from './model-config-contract'
 
 const OPENAI_COMPAT_PROVIDER_PREFIX = 'openai-compatible:'
@@ -324,10 +325,17 @@ async function pollOCompatTask(
 
     const models = await getUserModels(userId)
     const model = models.find((item) => item.modelKey === modelKey)
-    if (!model || !model.compatMediaTemplate) {
+    if (!model) {
         throw new Error(`OCOMPAT_TEMPLATE_NOT_FOUND: ${modelKey}`)
     }
+    // token61 视频模型未显式配置模板时，回退到内置模板
     const template = model.compatMediaTemplate
+      || (model.provider && getProviderKey(model.provider) === TOKEN61_PROVIDER_KEY
+        ? TOKEN61_VIDEO_TEMPLATE
+        : undefined)
+    if (!template) {
+        throw new Error(`OCOMPAT_TEMPLATE_NOT_FOUND: ${modelKey}`)
+    }
     if (template.mode !== 'async' || !template.status) {
         throw new Error(`OCOMPAT_TEMPLATE_NOT_ASYNC: ${modelKey}`)
     }

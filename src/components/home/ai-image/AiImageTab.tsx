@@ -75,23 +75,10 @@ export default function AiImageTab() {
     setActiveFeature(feature)
   }, [])
 
-  // 关闭 iframe
-  const handleCloseIframe = useCallback(() => {
-    setActiveFeature(null)
-  }, [])
-
   // 如果选中了功能，显示 iframe
   if (activeFeature) {
     return (
-      <div className="relative w-full h-[calc(100vh-200px)] min-h-[600px]">
-        {/* 关闭按钮 */}
-        <button
-          onClick={handleCloseIframe}
-          className="absolute top-4 right-4 z-10 glass-btn-base glass-btn-secondary p-2 rounded-lg"
-        >
-          <AppIcon name="close" className="w-5 h-5" />
-        </button>
-        
+      <div className="relative w-[95%] h-[calc(100vh-200px)] min-h-[600px] mx-auto">
         {/* iframe */}
         <iframe
           src={buildIframeUrl(activeFeature)}

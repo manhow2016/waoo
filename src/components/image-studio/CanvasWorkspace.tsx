@@ -322,20 +322,30 @@ function CanvasEditor(props: {
     })
   }
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault()
-    if (!canvasRef.current) return
-    const rect = canvasRef.current.getBoundingClientRect()
-    const factor = e.deltaY < 0 ? 1.1 : 0.9
-    const zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, view.zoom * factor))
-    const mouseX = e.clientX - rect.left
-    const mouseY = e.clientY - rect.top
-    setView((prev) => ({
-      zoom,
-      x: mouseX - ((mouseX - prev.x) / prev.zoom) * zoom,
-      y: mouseY - ((mouseY - prev.y) / prev.zoom) * zoom,
-    }))
-  }
+  // 使用原生 wheel 监听（passive: false）以支持 preventDefault 阻止页面滚动
+  useEffect(() => {
+    const element = canvasRef.current
+    if (!element) return
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const rect = element.getBoundingClientRect()
+      const factor = event.deltaY < 0 ? 1.1 : 0.9
+      const mouseX = event.clientX - rect.left
+      const mouseY = event.clientY - rect.top
+      setView((prev) => {
+        const zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, prev.zoom * factor))
+        return {
+          zoom,
+          x: mouseX - ((mouseX - prev.x) / prev.zoom) * zoom,
+          y: mouseY - ((mouseY - prev.y) / prev.zoom) * zoom,
+        }
+      })
+    }
+
+    element.addEventListener('wheel', onWheel, { passive: false })
+    return () => element.removeEventListener('wheel', onWheel)
+  }, [])
 
   const runConfigNode = async (node: CanvasNode) => {
     if (!node.genConfig || runningNodeId) return
@@ -437,7 +447,6 @@ function CanvasEditor(props: {
       {/* 画布（接近全屏，工具条/头部/缩放均为浮动覆盖层） */}
       <div
         ref={canvasRef}
-        onWheel={handleWheel}
         onPointerDown={handleBackgroundPointerDown}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropOnCanvas}

@@ -416,7 +416,6 @@ export async function runStoryToScriptOrchestrator(
   let splitStep: StoryToScriptStepOutput | null = null
   let clipList: StoryToScriptClipCandidate[] = []
   let lastBoundaryError: Error | null = null
-  let emptyClipsFailure = false
 
   for (let attempt = 1; attempt <= MAX_SPLIT_BOUNDARY_ATTEMPTS; attempt += 1) {
     const splitMeta: StoryToScriptStepMeta = {
@@ -439,7 +438,6 @@ export async function runStoryToScriptOrchestrator(
     )
     if (rawClipList.length === 0) {
       lastBoundaryError = new Error('split_clips returned empty clips')
-      emptyClipsFailure = true
       onLog?.('片段切分结果为空', {
         attempt,
         maxAttempts: MAX_SPLIT_BOUNDARY_ATTEMPTS,
@@ -459,8 +457,15 @@ export async function runStoryToScriptOrchestrator(
       const clipId = `clip_${index + 1}`
       const match = matcher.matchBoundary(startText, endText, searchFrom)
       if (!match) {
+        // 锚点无法在原文中定位时跳过该 clip（LLM 可能捏造了边界），
+        // 已匹配的 clip 继续保留，避免单个坏 clip 拖垮整个切分。
         failedAt = { clipId, startText, endText }
-        break
+        onLog?.('片段边界无法定位，跳过该 clip', {
+          clipId,
+          startText,
+          endText,
+        })
+        continue
       }
 
       nextClipList.push({
@@ -476,6 +481,11 @@ export async function runStoryToScriptOrchestrator(
         matchConfidence: match.confidence,
       })
       searchFrom = match.endIndex
+    }
+
+    // 跳过失败 clip 后仍有内容：视为该次尝试成功（部分匹配）
+    if (nextClipList.length > 0) {
+      failedAt = null
     }
 
     if (!failedAt) {
@@ -505,11 +515,11 @@ export async function runStoryToScriptOrchestrator(
     })
   }
 
-  // LLM 多次重试仍返回空分片时，降级为整段文本作为单个 clip，
-  // 避免任务直接失败（常见于过短或锚点无法定位的分集内容）。
-  // 注意：仅当「返回空数组」时降级；若 LLM 返回了 clips 但边界锚点
-  // 无法匹配（lastBoundaryError 由 failedAt 分支设置），仍抛出显式错误。
-  if (!splitStep && emptyClipsFailure) {
+  // 多次重试仍无法切分时，降级为整段文本作为单个 clip，避免任务直接失败。
+  // 覆盖两种情况：
+  // 1) LLM 返回空数组
+  // 2) LLM 返回的 clip 边界锚点全部无法在原文定位（如捏造的边界）
+  if (!splitStep) {
     onLog?.('片段切分连续失败，降级为单 clip 兜底', {
       maxAttempts: MAX_SPLIT_BOUNDARY_ATTEMPTS,
       reason: lastBoundaryError?.message || 'empty clips',

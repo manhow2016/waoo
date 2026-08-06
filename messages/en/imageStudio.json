@@ -94,6 +94,11 @@
       "undo": "Undo",
       "redo": "Redo"
     },
+    "background": {
+      "lines": "Grid background",
+      "dots": "Dot background",
+      "blank": "Blank background"
+    },
     "zoomPercent": "{value}%",
     "canvasEmpty": "Add nodes from the toolbar above, or drop an image to start",
     "connectHint": "Click another node to complete the connection",

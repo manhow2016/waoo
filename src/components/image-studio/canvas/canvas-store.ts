@@ -25,6 +25,8 @@ export interface CanvasNode {
   y: number
   width: number
   height: number
+  /** 节点标题 */
+  title?: string
   /** 图片节点：data URL 或 /m/ URL */
   content?: string
   /** 文本节点内容 */
@@ -59,6 +61,8 @@ export interface CanvasProject {
   updatedAt: string
   nodes: CanvasNode[]
   connections: CanvasConnection[]
+  /** 画布背景模式：lines 网格 / dots 圆点 / blank 空白 */
+  backgroundMode?: 'lines' | 'dots' | 'blank'
 }
 
 export interface CanvasStore {
@@ -84,14 +88,30 @@ function generateConnectionId(from: string, to: string): string {
   return `conn_${from}_${to}`
 }
 
+export const DEFAULT_NODE_SIZES: Record<CanvasNodeType, { width: number; height: number }> = {
+  image: { width: 340, height: 240 },
+  text: { width: 340, height: 200 },
+  config: { width: 380, height: 440 },
+  textAnnotation: { width: 240, height: 160 },
+}
+
+export const DEFAULT_NODE_TITLES: Record<CanvasNodeType, string> = {
+  image: '图片节点',
+  text: '文本',
+  config: '编排节点',
+  textAnnotation: '注释',
+}
+
 export function createNode(type: CanvasNodeType, x: number, y: number): CanvasNode {
+  const size = DEFAULT_NODE_SIZES[type]
   const base = {
     id: generateNodeId(),
     type,
     x,
     y,
-    width: 220,
-    height: type === 'image' ? 180 : type === 'config' ? 260 : 140,
+    width: size.width,
+    height: size.height,
+    title: DEFAULT_NODE_TITLES[type],
   }
   if (type === 'text') {
     return { ...base, text: '', prompt: '' }

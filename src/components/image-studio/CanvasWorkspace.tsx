@@ -210,6 +210,7 @@ function CanvasEditor(props: {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 })
   const [interactionMode, setInteractionMode] = useState<'select' | 'pan'>('select')
+  const [backgroundMode, setBackgroundMode] = useState<'lines' | 'dots' | 'blank'>(props.project.backgroundMode || 'lines')
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -223,7 +224,7 @@ function CanvasEditor(props: {
     setSaveStatus('saving')
     const timer = setTimeout(() => {
       try {
-        props.onUpdate((project) => ({ ...project, nodes, connections }))
+        props.onUpdate((project) => ({ ...project, nodes, connections, backgroundMode }))
         setSaveStatus('saved')
       } catch {
         setSaveStatus('error')
@@ -231,7 +232,7 @@ function CanvasEditor(props: {
     }, 400)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, connections])
+  }, [nodes, connections, backgroundMode])
 
   const handleRename = (e: React.FormEvent) => {
     e.preventDefault()
@@ -313,6 +314,46 @@ function CanvasEditor(props: {
 
   const handleResetView = () => {
     setView({ x: 0, y: 0, zoom: 1 })
+  }
+
+  const handleResizeStart = (nodeId: string, corner: string, e: React.PointerEvent) => {
+    const node = nodes.find((n) => n.id === nodeId)
+    if (!node) return
+    const startPointer = { x: e.clientX, y: e.clientY }
+    const startNode = { x: node.x, y: node.y, width: node.width, height: node.height }
+
+    const move = (ev: PointerEvent) => {
+      const dx = (ev.clientX - startPointer.x) / view.zoom
+      const dy = (ev.clientY - startPointer.y) / view.zoom
+      setNodes((prev) =>
+        prev.map((n) => {
+          if (n.id !== nodeId) return n
+          const next = { ...n }
+          if (corner.includes('e')) {
+            next.width = Math.max(180, startNode.width + dx)
+          }
+          if (corner.includes('s')) {
+            next.height = Math.max(120, startNode.height + dy)
+          }
+          if (corner.includes('w')) {
+            next.width = Math.max(180, startNode.width - dx)
+            next.x = startNode.x + (startNode.width - next.width)
+          }
+          if (corner.includes('n')) {
+            next.height = Math.max(120, startNode.height - dy)
+            next.y = startNode.y + (startNode.height - next.height)
+          }
+          return next
+        }),
+      )
+    }
+
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
 
   const handleZoom = (factor: number) => {
@@ -453,16 +494,19 @@ function CanvasEditor(props: {
         className="relative h-[calc(100vh-260px)] min-h-[560px] rounded-2xl overflow-hidden border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-muted)]/20"
         style={{ touchAction: 'none' }}
       >
-        {/* 网格背景 */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              'linear-gradient(var(--glass-stroke-soft) 1px, transparent 1px), linear-gradient(90deg, var(--glass-stroke-soft) 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-            transform: `translate(${view.x}px, ${view.y}px)`,
-          }}
-        />
+        {/* 背景（网格/圆点/空白，随缩放同步） */}
+        {backgroundMode !== 'blank' && (
+          <div
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{
+              backgroundImage: backgroundMode === 'dots'
+                ? 'radial-gradient(circle, var(--glass-stroke-soft) 1.2px, transparent 1.4px)'
+                : 'linear-gradient(var(--glass-stroke-soft) 1px, transparent 1px), linear-gradient(90deg, var(--glass-stroke-soft) 1px, transparent 1px)',
+              backgroundSize: `${48 * view.zoom}px ${48 * view.zoom}px`,
+              backgroundPosition: `${view.x % (48 * view.zoom)}px ${view.y % (48 * view.zoom)}px`,
+            }}
+          />
+        )}
 
         {/* 连线 */}
         <CanvasConnections
@@ -515,6 +559,7 @@ function CanvasEditor(props: {
                   updateConfigNode(node.id, { content: prepared.dataUrl })
                 }
               }}
+              onResizeStart={handleResizeStart}
             />
           ))}
         </div>
@@ -634,6 +679,51 @@ function CanvasEditor(props: {
           >
             <AppIcon name="sparkles" className="w-4 h-4" />
           </button>
+
+          <div className="mx-1 h-5 w-px bg-[var(--glass-stroke-soft)]" />
+
+          {/* 画布背景模式 */}
+          <div className="inline-flex rounded-xl p-0.5 bg-[var(--glass-bg-muted)] gap-0.5">
+            <button
+              type="button"
+              onClick={() => setBackgroundMode('lines')}
+              title={t('canvas.background.lines')}
+              className={cx(
+                'px-2 py-1.5 rounded-lg transition-all',
+                backgroundMode === 'lines'
+                  ? 'bg-[var(--glass-bg-surface-strong)] text-[var(--glass-text-primary)] shadow-sm'
+                  : 'text-[var(--glass-text-secondary)]',
+              )}
+            >
+              <AppIcon name="grid" className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setBackgroundMode('dots')}
+              title={t('canvas.background.dots')}
+              className={cx(
+                'px-2 py-1.5 rounded-lg transition-all',
+                backgroundMode === 'dots'
+                  ? 'bg-[var(--glass-bg-surface-strong)] text-[var(--glass-text-primary)] shadow-sm'
+                  : 'text-[var(--glass-text-secondary)]',
+              )}
+            >
+              <AppIcon name="circleDot" className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setBackgroundMode('blank')}
+              title={t('canvas.background.blank')}
+              className={cx(
+                'px-2 py-1.5 rounded-lg transition-all',
+                backgroundMode === 'blank'
+                  ? 'bg-[var(--glass-bg-surface-strong)] text-[var(--glass-text-primary)] shadow-sm'
+                  : 'text-[var(--glass-text-secondary)]',
+              )}
+            >
+              <AppIcon name="minus" className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* 右下角：缩放控制 */}
@@ -709,75 +799,66 @@ function CanvasNodeView(props: {
   onStartConnect: () => void
   onEndConnect: (targetId: string) => void
   onUploadImage: (files: File[]) => Promise<void>
+  onResizeStart: (nodeId: string, corner: string, e: React.PointerEvent) => void
 }) {
   const t = useTranslations('imageStudio')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isSelected = props.selected
+  const isTextAnnotation = props.node.type === 'textAnnotation'
+  const borderColor = isTextAnnotation
+    ? 'border-amber-500/40'
+    : isSelected
+      ? 'border-[var(--glass-tone-info-fg)]'
+      : 'border-[var(--glass-stroke-soft)]'
+  const backgroundClass = isTextAnnotation ? 'bg-amber-500/10' : 'bg-[var(--glass-bg-surface-strong)]'
+
+  const resizeCorners = [
+    { corner: 'nw', className: '-top-1.5 -left-1.5 cursor-nwse-resize' },
+    { corner: 'ne', className: '-top-1.5 -right-1.5 cursor-nesw-resize' },
+    { corner: 'sw', className: '-bottom-1.5 -left-1.5 cursor-nesw-resize' },
+    { corner: 'se', className: '-bottom-1.5 -right-1.5 cursor-nwse-resize' },
+  ]
 
   return (
     <div
       data-node-id={props.node.id}
       className={cx(
-        'absolute rounded-xl border-2 bg-[var(--glass-bg-surface-strong)] shadow-md',
-        props.selected ? 'border-[var(--glass-tone-info-fg)]' : 'border-[var(--glass-stroke-soft)]',
-        props.node.type === 'textAnnotation' && 'bg-amber-500/10 border-amber-500/30',
+        'group absolute rounded-xl border-2 shadow-md transition-[border-color,box-shadow] flex flex-col overflow-hidden',
+        borderColor,
+        backgroundClass,
+        isSelected && 'shadow-[0_0_0_4px_color-mix(in_srgb,var(--glass-tone-info-fg)_18%,transparent)]',
       )}
       style={{
         left: props.node.x,
         top: props.node.y,
         width: props.node.width,
-        height: props.node.type === 'image' && props.node.content ? props.node.height : undefined,
-        minHeight: 60,
-        zIndex: props.selected ? 10 : 1,
+        height: props.node.height,
+        zIndex: isSelected ? 10 : 1,
       }}
       onPointerDown={props.onPointerDown}
       onClick={props.onSelect}
     >
-      {/* 头部 */}
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--glass-stroke-soft)] cursor-grab">
-        <span className="flex items-center gap-1.5 text-[10px] font-medium text-[var(--glass-text-tertiary)] uppercase">
-          <NodeTypeIcon type={props.node.type} />
-          {nodeTypeLabel(props.node.type)}
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            title="连接"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (props.connectingFrom === props.node.id) return
-              if (props.connectingFrom) {
-                props.onEndConnect(props.node.id)
-              } else {
-                props.onStartConnect()
-              }
-            }}
-            className="glass-btn-base glass-btn-ghost p-0.5 rounded"
-          >
-            <AppIcon name="link" className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            title="删除"
-            onClick={(e) => {
-              e.stopPropagation()
-              props.onDelete()
-            }}
-            className="glass-btn-base glass-btn-ghost p-0.5 rounded text-[var(--glass-tone-danger-fg)]"
-          >
-            <AppIcon name="trash" className="w-3 h-3" />
-          </button>
-        </div>
+      {/* 头部：显示节点标题 */}
+      <div className="flex min-h-7 items-center gap-2 px-2.5 py-1 text-[11px] font-medium text-[var(--glass-text-tertiary)] border-b border-[var(--glass-stroke-soft)] cursor-grab select-none">
+        <NodeTypeIcon type={props.node.type} />
+        <span className="truncate">{props.node.title || nodeTypeLabel(props.node.type)}</span>
       </div>
 
       {/* 内容区 */}
-      <div className="p-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={cx(
+          'relative min-h-0 flex-1 p-2 space-y-2',
+          props.node.type === 'config' && 'overflow-y-auto',
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
         {props.node.type === 'text' && (
           <>
             <textarea
               value={props.node.text || ''}
               onChange={(e) => props.onUpdate({ text: e.target.value })}
               placeholder={t('canvas.textNode.contentPlaceholder')}
-              rows={3}
+              rows={4}
               className="glass-textarea-base w-full px-2 py-1.5 text-xs"
             />
             <input
@@ -794,8 +875,8 @@ function CanvasNodeView(props: {
           <textarea
             value={props.node.text || ''}
             onChange={(e) => props.onUpdate({ text: e.target.value })}
-            rows={2}
-            className="w-full bg-transparent text-sm text-[var(--glass-text-primary)] outline-none resize-none"
+            rows={4}
+            className="w-full h-[calc(100%-24px)] bg-transparent text-sm text-[var(--glass-text-primary)] outline-none resize-none"
           />
         )}
 
@@ -806,12 +887,11 @@ function CanvasNodeView(props: {
               <img
                 src={props.node.content}
                 alt=""
-                className="w-full rounded-lg object-cover"
-                style={{ height: props.node.height - 36 }}
+                className="w-full h-[calc(100%-8px)] rounded-lg object-contain"
                 onDragStart={(e) => e.preventDefault()}
               />
             ) : (
-              <div className="flex items-center justify-center h-28 border border-dashed border-[var(--glass-stroke-soft)] rounded-lg">
+              <div className="flex flex-col items-center justify-center gap-2 h-[calc(100%-8px)] border border-dashed border-[var(--glass-stroke-soft)] rounded-lg">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -823,8 +903,8 @@ function CanvasNodeView(props: {
                     e.target.value = ''
                   }}
                 />
+                <AppIcon name="upload" className="w-5 h-5 text-[var(--glass-text-tertiary)]" />
                 <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-[var(--glass-text-tertiary)] flex items-center gap-1.5">
-                  <AppIcon name="upload" className="w-4 h-4" />
                   {t('canvas.imageNode.uploadImage')}
                 </button>
               </div>
@@ -842,6 +922,91 @@ function CanvasNodeView(props: {
           />
         )}
       </div>
+
+      {/* 顶部操作按钮（选中/悬停显示） */}
+      {isSelected && (
+        <div className="absolute top-0.5 right-0.5 flex items-center gap-1 z-20 opacity-100" onPointerDown={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            title={t('canvas.toolbar.connect')}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (props.connectingFrom === props.node.id) return
+              if (props.connectingFrom) {
+                props.onEndConnect(props.node.id)
+              } else {
+                props.onStartConnect()
+              }
+            }}
+            className="glass-btn-base glass-btn-ghost p-1 rounded bg-[var(--glass-bg-surface-strong)]/90"
+          >
+            <AppIcon name="link" className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            title={t('canvas.toolbar.delete')}
+            onClick={(e) => {
+              e.stopPropagation()
+              props.onDelete()
+            }}
+            className="glass-btn-base glass-btn-ghost p-1 rounded bg-[var(--glass-bg-surface-strong)]/90 text-[var(--glass-tone-danger-fg)]"
+          >
+            <AppIcon name="trash" className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {/* 左右连接手柄 */}
+      <button
+        type="button"
+        aria-label="连接输出"
+        className={cx(
+          'absolute top-1/2 -right-3.5 grid w-7 h-7 -translate-y-1/2 place-items-center transition-opacity',
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+        )}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          if (props.connectingFrom === props.node.id) return
+          if (props.connectingFrom) {
+            props.onEndConnect(props.node.id)
+          } else {
+            props.onStartConnect()
+          }
+        }}
+      >
+        <span className={cx('w-3 h-3 rounded-full border-2 shadow-sm', props.connectingFrom === props.node.id ? 'bg-[var(--glass-tone-info-fg)] border-[var(--glass-bg-surface-strong)]' : 'bg-[var(--glass-tone-info-fg)] border-[var(--glass-bg-surface-strong)]')} />
+      </button>
+      <button
+        type="button"
+        aria-label="连接输入"
+        className={cx(
+          'absolute top-1/2 -left-3.5 grid w-7 h-7 -translate-y-1/2 place-items-center transition-opacity',
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+        )}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          if (props.connectingFrom) {
+            props.onEndConnect(props.node.id)
+          }
+        }}
+      >
+        <span className="w-3 h-3 rounded-full border-2 border-[var(--glass-bg-surface-strong)] bg-[var(--glass-text-tertiary)] shadow-sm" />
+      </button>
+
+      {/* 缩放手柄（选中显示） */}
+      {isSelected && resizeCorners.map(({ corner, className }) => (
+        <div
+          key={corner}
+          className={cx('absolute w-6 h-6 grid place-items-center', className)}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            props.onResizeStart(props.node.id, corner, e)
+          }}
+        >
+          <span className="w-3 h-3 rounded-sm border-2 border-[var(--glass-tone-info-fg)] bg-[var(--glass-bg-surface-strong)] shadow-sm" />
+        </div>
+      ))}
     </div>
   )
 }

@@ -94,6 +94,11 @@
       "undo": "撤销",
       "redo": "重做"
     },
+    "background": {
+      "lines": "网格背景",
+      "dots": "圆点背景",
+      "blank": "空白背景"
+    },
     "zoomPercent": "{value}%",
     "canvasEmpty": "从上方工具条添加节点，或拖入图片开始创作",
     "connectHint": "点击另一个节点完成连线",

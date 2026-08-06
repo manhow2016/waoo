@@ -21,6 +21,7 @@
 
 - 🎬 **AI Script Analysis** — Parse novels, extract characters, scenes & plot automatically
 - 🎨 **Character & Scene Generation** — Consistent AI-generated character and scene images
+- 🖼️ **Image Studio** — Workbench / Infinite Canvas / Reverse Prompt / GIF Studio (standalone entry `/image-studio`)
 - 📽️ **Storyboard Video** — Auto-generate shots and compose into complete videos
 - 🎙️ **AI Voiceover** — Multi-character voice synthesis
 - 🌐 **Bilingual UI** — Chinese / English, switch in the top-right corner
@@ -129,6 +130,13 @@ After launching, go to **Settings** to configure your AI service API keys. A bui
 ![67509361cbe6809d2496a550de5733b9f99a9702](https://github.com/user-attachments/assets/f2fb6a64-5ba8-4896-a064-be0ded213e42)
 ![466e13c8fd1fc799d8f588c367ebfa24e1e99bf7](https://github.com/user-attachments/assets/09bbff39-e535-4c67-80a9-69421c3b05ee)
 ![c067c197c20b0f1de456357c49cdf0b0973c9b31](https://github.com/user-attachments/assets/688e3147-6e95-43b0-b9e7-dd9af40db8a0)
+
+### Image Studio (`/image-studio`)
+A standalone image creation entry, sharing the unified waoowaoo model configuration with projects:
+- **Workbench** — Text-to-image / image-to-image with reference image upload, output size / aspect ratio / temperature / parallel count controls, generation history and prompt optimization
+- **Infinite Canvas** — Visual node canvas: text / image / generation-config nodes connected to drive batch generation
+- **Reverse Prompt** — Upload a reference image and stream back a stylized prompt (Style Extract / Replicate modes)
+- **GIF Studio** — Generate a 3×4 animation grid and encode it into a GIF, with frame delay / repeat / frame padding options
 
 ---
 

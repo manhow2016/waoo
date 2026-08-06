@@ -1,0 +1,786 @@
+/**
+ * 无限画布（Canvas Workspace）
+ *
+ * 移植自 nova-image-studio 的 CanvasWorkspace + CanvasEditor 核心能力，
+ * 通过 zustand 持久化项目，节点连线驱动生成，生成走 /api/image-studio/generate。
+ */
+
+'use client'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
+import { AppIcon } from '@/components/ui/icons'
+import CanvasConnections from './canvas/CanvasConnections'
+import {
+  useCanvasStore,
+  createNode,
+  connectNodes,
+  deleteNode,
+  collectUpstreamResources,
+  composeConfigPrompt,
+  type CanvasNode,
+  type CanvasNodeType,
+  type CanvasProject,
+} from './canvas/canvas-store'
+import { useStudioModels, getStudioOutputSizeOptions } from '@/lib/image-studio/models'
+import { studioGenerate } from '@/lib/image-studio/client'
+import { prepareImageFile, extractImageFiles } from './image-utils'
+import { GlassSlider, StudioSpinner, StudioModal, StudioEmptyState, cx } from './ui'
+import { useRouter } from '@/i18n/navigation'
+
+const ZOOM_MIN = 0.25
+const ZOOM_MAX = 2
+
+export default function CanvasWorkspace() {
+  const { projects, activeProjectId, createProject, deleteProject, setActiveProject, updateProject } = useCanvasStore()
+  const activeProject = useMemo(
+    () => projects.find((project) => project.id === activeProjectId) || null,
+    [projects, activeProjectId],
+  )
+
+  if (activeProject) {
+    return (
+      <CanvasEditor
+        project={activeProject}
+        onBack={() => setActiveProject(null)}
+        onUpdate={(updater) => updateProject(activeProject.id, updater)}
+      />
+    )
+  }
+
+  return (
+    <CanvasProjectList
+      projects={projects}
+      onCreate={createProject}
+      onDelete={deleteProject}
+      onOpen={setActiveProject}
+    />
+  )
+}
+
+function CanvasProjectList(props: {
+  projects: CanvasProject[]
+  onCreate: (name: string) => string
+  onDelete: (projectId: string) => void
+  onOpen: (projectId: string) => void
+}) {
+  const t = useTranslations('imageStudio')
+  const tc = useTranslations('imageStudio.common')
+  const [showCreate, setShowCreate] = useState(false)
+  const [name, setName] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<CanvasProject | null>(null)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-[var(--glass-text-primary)]">
+          {t('canvas.projectList')}
+        </h3>
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
+          className="glass-btn-base glass-btn-primary px-4 py-2 flex items-center gap-2"
+        >
+          <AppIcon name="plus" className="w-4 h-4" />
+          {t('canvas.newProject')}
+        </button>
+      </div>
+
+      {props.projects.length === 0 ? (
+        <StudioEmptyState
+          title={t('canvas.emptyProjects')}
+          description={t('canvas.emptyProjectsDesc')}
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {props.projects.map((project) => {
+            const imageNodes = project.nodes.filter((node) => node.type === 'image' && node.content)
+            return (
+              <div
+                key={project.id}
+                className="glass-surface rounded-2xl overflow-hidden group cursor-pointer"
+                onClick={() => props.onOpen(project.id)}
+              >
+                <div className="h-36 bg-[var(--glass-bg-muted)] flex items-center justify-center overflow-hidden">
+                  {imageNodes[0]?.content ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imageNodes[0].content} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <AppIcon name="image" className="w-10 h-10 text-[var(--glass-text-tertiary)]" />
+                  )}
+                </div>
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-[var(--glass-text-primary)]">{project.name}</h4>
+                    <p className="text-[10px] text-[var(--glass-text-tertiary)] mt-1">
+                      {project.nodes.length} 节点 · {new Date(project.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDeleteTarget(project)
+                    }}
+                    className="glass-btn-base glass-btn-ghost p-1.5 rounded-lg text-[var(--glass-tone-danger-fg)] opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <AppIcon name="trash" className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {showCreate && (
+        <StudioModal title={t('canvas.newProject')} onClose={() => setShowCreate(false)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (name.trim()) {
+                props.onCreate(name.trim())
+                setShowCreate(false)
+                setName('')
+              }
+            }}
+          >
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t('canvas.projectNamePlaceholder')}
+              className="glass-input-base w-full px-3 py-2 mb-4"
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setShowCreate(false)} className="glass-btn-base glass-btn-secondary px-4 py-2">
+                {tc('cancel')}
+              </button>
+              <button type="submit" disabled={!name.trim()} className="glass-btn-base glass-btn-primary px-4 py-2 disabled:opacity-50">
+                {t('canvas.createProject')}
+              </button>
+            </div>
+          </form>
+        </StudioModal>
+      )}
+
+      {deleteTarget && (
+        <StudioModal title={tc('delete')} onClose={() => setDeleteTarget(null)}>
+          <p className="text-sm text-[var(--glass-text-secondary)] mb-4">
+            {t('canvas.deleteConfirm', { name: deleteTarget.name })}
+          </p>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setDeleteTarget(null)} className="glass-btn-base glass-btn-secondary px-4 py-2">
+              {tc('cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                props.onDelete(deleteTarget.id)
+                setDeleteTarget(null)
+              }}
+              className="glass-btn-base glass-btn-danger px-4 py-2"
+            >
+              {tc('delete')}
+            </button>
+          </div>
+        </StudioModal>
+      )}
+    </div>
+  )
+}
+
+// ===== 画布编辑器 =====
+
+function CanvasEditor(props: {
+  project: CanvasProject
+  onBack: () => void
+  onUpdate: (updater: (project: CanvasProject) => CanvasProject) => void
+}) {
+  const t = useTranslations('imageStudio')
+  const tc = useTranslations('imageStudio.common')
+  const { imageModels } = useStudioModels()
+  const { data: session } = useSession()
+  const router = useRouter()
+
+  const [nodes, setNodes] = useState<CanvasNode[]>(props.project.nodes)
+  const [connections, setConnections] = useState(props.project.connections)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [view, setView] = useState({ x: 0, y: 0, zoom: 1 })
+  const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
+  const [runningNodeId, setRunningNodeId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [name, setName] = useState(props.project.name)
+
+  const canvasRef = useRef<HTMLDivElement>(null)
+
+  // 同步到 store（防抖保存）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      props.onUpdate((project) => ({ ...project, nodes, connections }))
+    }, 400)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, connections])
+
+  const handleRename = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (name.trim()) props.onUpdate((project) => ({ ...project, name: name.trim() }))
+  }
+
+  const addNode = (type: CanvasNodeType) => {
+    const offset = 30 * (nodes.length % 5)
+    const node = createNode(type, 80 + offset, 80 + offset)
+    setNodes((prev) => [...prev, node])
+    setSelectedNodeId(node.id)
+  }
+
+  const handleDropOnCanvas = (e: React.DragEvent) => {
+    e.preventDefault()
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const files = extractImageFiles(e.dataTransfer.items)
+    if (files.length === 0) return
+    const worldX = (e.clientX - rect.left - view.x) / view.zoom
+    const worldY = (e.clientY - rect.top - view.y) / view.zoom
+    void (async () => {
+      for (const file of files.slice(0, 4)) {
+        try {
+          const prepared = await prepareImageFile(file)
+          const node = createNode('image', worldX + Math.random() * 40, worldY + Math.random() * 40)
+          node.content = prepared.dataUrl
+          setNodes((prev) => [...prev, node])
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err))
+        }
+      }
+    })()
+  }
+
+  const handleNodePointerDown = (node: CanvasNode, e: React.PointerEvent) => {
+    if (e.button === 2) return
+    e.stopPropagation()
+    setSelectedNodeId(node.id)
+    const start = { x: e.clientX, y: e.clientY }
+    const move = (ev: PointerEvent) => {
+      const dx = (ev.clientX - start.x) / view.zoom
+      const dy = (ev.clientY - start.y) / view.zoom
+      setNodes((prev) =>
+        prev.map((n) => (n.id === node.id ? { ...n, x: node.x + dx, y: node.y + dy } : n)),
+      )
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  const handleBackgroundPointerDown = (e: React.PointerEvent) => {
+    if (e.target !== e.currentTarget) return
+    setSelectedNodeId(null)
+    setConnectingFrom(null)
+    const start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
+    const move = (ev: PointerEvent) => {
+      setView((prev) => ({ ...prev, x: start.vx + (ev.clientX - start.x), y: start.vy + (ev.clientY - start.y) }))
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!canvasRef.current) return
+    const rect = canvasRef.current.getBoundingClientRect()
+    const factor = e.deltaY < 0 ? 1.1 : 0.9
+    const zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, view.zoom * factor))
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+    setView((prev) => ({
+      zoom,
+      x: mouseX - ((mouseX - prev.x) / prev.zoom) * zoom,
+      y: mouseY - ((mouseY - prev.y) / prev.zoom) * zoom,
+    }))
+  }
+
+  const runConfigNode = async (node: CanvasNode) => {
+    if (!node.genConfig || runningNodeId) return
+    if (!session?.user) {
+      router.push({ pathname: '/auth/signin' })
+      return
+    }
+    const config = node.genConfig
+    if (!config.model) {
+      setError(tc('noModels'))
+      return
+    }
+
+    const upstream = collectUpstreamResources(nodes, connections, node.id)
+    const { prompt, referenceImages } = composeConfigPrompt(node.composerContent || '', upstream)
+    if (!prompt) {
+      setError('配置节点需要提示词或上游文本节点')
+      return
+    }
+
+    setRunningNodeId(node.id)
+    setError(null)
+    try {
+      const count = Math.max(1, Math.min(4, config.count || 1))
+      const result = await studioGenerate({
+        modelKey: config.model,
+        prompt,
+        referenceImages,
+        options: {
+          outputSize: config.outputSize as never,
+          aspectRatio: config.aspectRatio,
+          temperature: config.temperature,
+        },
+        parallelCount: count,
+      })
+
+      // 创建结果图片节点并连线
+      const resultNodes: CanvasNode[] = result.images.map((url, index) => {
+        const resultNode = createNode('image', node.x + 320 + index * 40, node.y + index * 40)
+        resultNode.content = url
+        resultNode.width = 220
+        resultNode.height = 220
+        return resultNode
+      })
+      setNodes((prev) => {
+        const next = [...prev, ...resultNodes]
+        const nextConnections = [
+          ...connections,
+          ...resultNodes.map((resultNode) => ({
+            id: `conn_${node.id}_${resultNode.id}`,
+            fromNodeId: node.id,
+            toNodeId: resultNode.id,
+          })),
+        ]
+        setConnections(nextConnections)
+        return next
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setRunningNodeId(null)
+    }
+  }
+
+  const updateConfigNode = (nodeId: string, patch: Partial<CanvasNode>) => {
+    setNodes((prev) => prev.map((node) => (node.id === nodeId ? { ...node, ...patch } : node)))
+  }
+
+  const canvasKey = props.project.id
+  useEffect(() => {
+    setNodes(props.project.nodes)
+    setConnections(props.project.connections)
+  }, [canvasKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connectionPaths = connections
+    .map((connection) => {
+      const from = nodes.find((node) => node.id === connection.fromNodeId)
+      const to = nodes.find((node) => node.id === connection.toNodeId)
+      if (!from || !to) return null
+      const fromCenter = { x: from.x + from.width / 2, y: from.y + from.height / 2 }
+      const toCenter = { x: to.x + to.width / 2, y: to.y + to.height / 2 }
+      const dx = Math.abs(toCenter.x - fromCenter.x)
+      const curvature = Math.max(dx * 0.4, 50)
+      return {
+        key: connection.id,
+        d: `M ${fromCenter.x} ${fromCenter.y} C ${fromCenter.x + curvature} ${fromCenter.y}, ${toCenter.x - curvature} ${toCenter.y}, ${toCenter.x} ${toCenter.y}`,
+      }
+    })
+    .filter((path): path is { key: string; d: string } => path !== null)
+
+  return (
+    <div className="space-y-4">
+      {/* 工具栏 */}
+      <div className="glass-surface rounded-2xl p-3 flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={props.onBack}
+          className="glass-btn-base glass-btn-ghost p-2 rounded-lg"
+          title={t('canvas.back')}
+        >
+          <AppIcon name="chevronLeft" className="w-4 h-4" />
+        </button>
+        <form onSubmit={handleRename} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="glass-input-base px-3 py-1.5 text-sm w-40"
+          />
+        </form>
+        <div className="flex-1" />
+        <button type="button" onClick={() => addNode('text')} className="glass-btn-base glass-btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5">
+          <AppIcon name="fileText" className="w-3.5 h-3.5" />
+          {t('canvas.addTextNode')}
+        </button>
+        <button type="button" onClick={() => addNode('image')} className="glass-btn-base glass-btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5">
+          <AppIcon name="image" className="w-3.5 h-3.5" />
+          {t('canvas.addImageNode')}
+        </button>
+        <button type="button" onClick={() => addNode('config')} className="glass-btn-base glass-btn-tone-info px-3 py-1.5 text-xs flex items-center gap-1.5">
+          <AppIcon name="sparkles" className="w-3.5 h-3.5" />
+          {t('canvas.addConfigNode')}
+        </button>
+        <div className="flex items-center gap-1 text-xs text-[var(--glass-text-tertiary)]">
+          <button type="button" onClick={() => setView((prev) => ({ ...prev, zoom: Math.max(ZOOM_MIN, prev.zoom * 0.9) }))} className="glass-btn-base glass-btn-ghost px-2 py-1">-</button>
+          <span>{Math.round(view.zoom * 100)}%</span>
+          <button type="button" onClick={() => setView((prev) => ({ ...prev, zoom: Math.min(ZOOM_MAX, prev.zoom * 1.1) }))} className="glass-btn-base glass-btn-ghost px-2 py-1">+</button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* 画布 */}
+      <div
+        ref={canvasRef}
+        onWheel={handleWheel}
+        onPointerDown={handleBackgroundPointerDown}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDropOnCanvas}
+        className="relative h-[calc(100vh-260px)] min-h-[480px] rounded-2xl overflow-hidden border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-muted)]/20"
+        style={{ touchAction: 'none' }}
+      >
+        {/* 网格背景 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'linear-gradient(var(--glass-stroke-soft) 1px, transparent 1px), linear-gradient(90deg, var(--glass-stroke-soft) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+            transform: `translate(${view.x}px, ${view.y}px)`,
+          }}
+        />
+
+        {/* 连线 */}
+        <CanvasConnections
+          paths={connectionPaths}
+          zoom={view.zoom}
+          offsetX={view.x / view.zoom}
+          offsetY={view.y / view.zoom}
+        />
+
+        {/* 节点 */}
+        <div
+          className="absolute"
+          style={{
+            transform: `scale(${view.zoom})`,
+            transformOrigin: '0 0',
+            left: view.x,
+            top: view.y,
+          }}
+        >
+          {nodes.map((node) => (
+            <CanvasNodeView
+              key={node.id}
+              node={node}
+              selected={selectedNodeId === node.id}
+              imageModels={imageModels}
+              running={runningNodeId === node.id}
+              connectingFrom={connectingFrom}
+              onPointerDown={(e) => handleNodePointerDown(node, e)}
+              onSelect={() => setSelectedNodeId(node.id)}
+              onUpdate={(patch) => updateConfigNode(node.id, patch)}
+              onDelete={() => {
+                const result = deleteNode(nodes, connections, node.id)
+                setNodes(result.nodes)
+                setConnections(result.connections)
+                setSelectedNodeId(null)
+              }}
+              onRun={() => void runConfigNode(node)}
+              onStartConnect={() => setConnectingFrom(node.id)}
+              onEndConnect={(targetId) => {
+                if (connectingFrom) {
+                  const result = connectNodes(nodes, connections, connectingFrom, targetId)
+                  setNodes(result.nodes)
+                  setConnections(result.connections)
+                }
+                setConnectingFrom(null)
+              }}
+              onUploadImage={async (files) => {
+                for (const file of files) {
+                  const prepared = await prepareImageFile(file)
+                  updateConfigNode(node.id, { content: prepared.dataUrl })
+                }
+              }}
+            />
+          ))}
+        </div>
+
+        {/* 连线提示 */}
+        {connectingFrom && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 glass-chip glass-chip-info px-3 py-1.5 text-xs">
+            点击另一个节点完成连线
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ===== 单个节点 =====
+
+function CanvasNodeView(props: {
+  node: CanvasNode
+  selected: boolean
+  imageModels: ReturnType<typeof useStudioModels>['imageModels']
+  running: boolean
+  connectingFrom: string | null
+  onPointerDown: (e: React.PointerEvent) => void
+  onSelect: () => void
+  onUpdate: (patch: Partial<CanvasNode>) => void
+  onDelete: () => void
+  onRun: () => void
+  onStartConnect: () => void
+  onEndConnect: (targetId: string) => void
+  onUploadImage: (files: File[]) => Promise<void>
+}) {
+  const t = useTranslations('imageStudio')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div
+      className={cx(
+        'absolute rounded-xl border-2 bg-[var(--glass-bg-surface-strong)] shadow-md',
+        props.selected ? 'border-[var(--glass-tone-info-fg)]' : 'border-[var(--glass-stroke-soft)]',
+        props.node.type === 'textAnnotation' && 'bg-amber-500/10 border-amber-500/30',
+      )}
+      style={{
+        left: props.node.x,
+        top: props.node.y,
+        width: props.node.width,
+        height: props.node.type === 'image' && props.node.content ? props.node.height : undefined,
+        minHeight: 60,
+        zIndex: props.selected ? 10 : 1,
+      }}
+      onPointerDown={props.onPointerDown}
+      onClick={props.onSelect}
+    >
+      {/* 头部 */}
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--glass-stroke-soft)]">
+        <span className="text-[10px] font-medium text-[var(--glass-text-tertiary)] uppercase">
+          {nodeTypeLabel(props.node.type)}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            title="连接"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (props.connectingFrom === props.node.id) return
+              if (props.connectingFrom) {
+                props.onEndConnect(props.node.id)
+              } else {
+                props.onStartConnect()
+              }
+            }}
+            className="glass-btn-base glass-btn-ghost p-0.5 rounded"
+          >
+            <AppIcon name="link" className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            title="删除"
+            onClick={(e) => {
+              e.stopPropagation()
+              props.onDelete()
+            }}
+            className="glass-btn-base glass-btn-ghost p-0.5 rounded text-[var(--glass-tone-danger-fg)]"
+          >
+            <AppIcon name="trash" className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* 内容区 */}
+      <div className="p-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+        {props.node.type === 'text' && (
+          <>
+            <textarea
+              value={props.node.text || ''}
+              onChange={(e) => props.onUpdate({ text: e.target.value })}
+              placeholder={t('canvas.textNode.contentPlaceholder')}
+              rows={3}
+              className="glass-textarea-base w-full px-2 py-1.5 text-xs"
+            />
+            <input
+              type="text"
+              value={props.node.prompt || ''}
+              onChange={(e) => props.onUpdate({ prompt: e.target.value })}
+              placeholder={t('canvas.textNode.promptPlaceholder')}
+              className="glass-input-base w-full px-2 py-1.5 text-xs"
+            />
+          </>
+        )}
+
+        {props.node.type === 'textAnnotation' && (
+          <textarea
+            value={props.node.text || ''}
+            onChange={(e) => props.onUpdate({ text: e.target.value })}
+            rows={2}
+            className="w-full bg-transparent text-sm text-[var(--glass-text-primary)] outline-none resize-none"
+          />
+        )}
+
+        {props.node.type === 'image' && (
+          <>
+            {props.node.content ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={props.node.content}
+                alt=""
+                className="w-full rounded-lg object-cover"
+                style={{ height: props.node.height - 36 }}
+                onDragStart={(e) => e.preventDefault()}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-28 border border-dashed border-[var(--glass-stroke-soft)] rounded-lg">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) void props.onUploadImage(Array.from(e.target.files))
+                    e.target.value = ''
+                  }}
+                />
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs text-[var(--glass-text-tertiary)] flex items-center gap-1.5">
+                  <AppIcon name="upload" className="w-4 h-4" />
+                  {t('canvas.imageNode.uploadImage')}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {props.node.type === 'config' && (
+          <ConfigNodeBody
+            node={props.node}
+            imageModels={props.imageModels}
+            running={props.running}
+            onUpdate={props.onUpdate}
+            onRun={props.onRun}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function nodeTypeLabel(type: CanvasNodeType): string {
+  const labels: Record<CanvasNodeType, string> = {
+    image: 'Image',
+    text: 'Text',
+    config: 'Config',
+    textAnnotation: 'Note',
+  }
+  return labels[type]
+}
+
+function ConfigNodeBody(props: {
+  node: CanvasNode
+  imageModels: ReturnType<typeof useStudioModels>['imageModels']
+  running: boolean
+  onUpdate: (patch: Partial<CanvasNode>) => void
+  onRun: () => void
+}) {
+  const t = useTranslations('imageStudio')
+  const config = props.node.genConfig || { model: '', outputSize: '1K', aspectRatio: '1:1', temperature: 1, count: 1 }
+
+  const sizeOptions = useMemo(() => {
+    const model = props.imageModels.find((item) => item.value === config.model)
+    return getStudioOutputSizeOptions(model).map((size) => ({ value: size, label: size }))
+  }, [props.imageModels, config.model])
+
+  const updateConfig = (patch: Partial<NonNullable<CanvasNode['genConfig']>>) => {
+    props.onUpdate({ genConfig: { ...config, ...patch } })
+  }
+
+  return (
+    <div className="space-y-2">
+      <textarea
+        value={props.node.composerContent || ''}
+        onChange={(e) => props.onUpdate({ composerContent: e.target.value })}
+        placeholder={t('canvas.configNode.promptPlaceholder')}
+        rows={3}
+        className="glass-textarea-base w-full px-2 py-1.5 text-xs"
+      />
+      <select
+        value={config.model}
+        onChange={(e) => updateConfig({ model: e.target.value })}
+        className="glass-select-base px-2 py-1.5 text-xs w-full"
+      >
+        <option value="">{t('canvas.configNode.model')}</option>
+        {props.imageModels.map((model) => (
+          <option key={model.value} value={model.value}>{model.label}</option>
+        ))}
+      </select>
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={config.outputSize}
+          onChange={(e) => updateConfig({ outputSize: e.target.value })}
+          className="glass-select-base px-2 py-1.5 text-xs"
+        >
+          {sizeOptions.map((size) => (
+            <option key={size.value} value={size.value}>{size.label}</option>
+          ))}
+        </select>
+        <select
+          value={config.aspectRatio}
+          onChange={(e) => updateConfig({ aspectRatio: e.target.value })}
+          className="glass-select-base px-2 py-1.5 text-xs"
+        >
+          <option value="1:1">1:1</option>
+          <option value="16:9">16:9</option>
+          <option value="9:16">9:16</option>
+          <option value="3:2">3:2</option>
+          <option value="2:3">2:3</option>
+        </select>
+      </div>
+      <GlassSlider
+        label={t('canvas.configNode.temperature')}
+        value={config.temperature}
+        min={0}
+        max={2}
+        step={0.1}
+        onChange={(value) => updateConfig({ temperature: value })}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-xs text-[var(--glass-text-secondary)]">{t('canvas.configNode.count')}</label>
+        <select
+          value={config.count}
+          onChange={(e) => updateConfig({ count: Number(e.target.value) })}
+          className="glass-select-base px-2 py-1 text-xs"
+        >
+          {[1, 2, 3, 4].map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="button"
+        onClick={props.onRun}
+        disabled={props.running}
+        className="glass-btn-base glass-btn-tone-info w-full py-1.5 text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+      >
+        {props.running ? <StudioSpinner /> : <AppIcon name="sparkles" className="w-3 h-3" />}
+        {props.running ? t('canvas.configNode.running') : t('canvas.configNode.run')}
+      </button>
+    </div>
+  )
+}

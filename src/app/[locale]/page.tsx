@@ -38,7 +38,7 @@ export default function Home() {
       <div className='glass-page min-h-screen flex items-center justify-center'>
         <div className='flex flex-col items-center gap-4'>
           <Image
-            src='/logo-small.png?v=1'
+            src='/logo-small.png'
             alt='waoowaoo'
             width={80}
             height={80}
@@ -61,7 +61,7 @@ export default function Home() {
       >
         <Link href={{ pathname: '/' }} className='group'>
           <Image
-            src='/logo-small.png?v=1'
+            src='/logo-small.png'
             alt='waoowaoo'
             width={80}
             height={80}

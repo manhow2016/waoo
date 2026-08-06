@@ -46,9 +46,9 @@ export const TOKEN61_VIDEO_TEMPLATE: OpenAICompatMediaTemplate = {
   polling: {
     intervalMs: 3000,
     timeoutMs: 600000,
-    // token61 状态值：IN_PROGRESS(生成中) / SUCCESS(完成) / FAILED(失败)
+    // token61 状态值：IN_PROGRESS(生成中) / SUCCESS(完成) / FAILURE(失败)
     doneStates: ['success', 'succeeded', 'completed'],
-    failStates: ['failed', 'error', 'canceled'],
+    failStates: ['failure', 'failed', 'error', 'canceled'],
   },
 }
 

@@ -347,6 +347,12 @@ function CanvasEditor(props: {
 
   const handleNodePointerDown = (node: CanvasNode, e: React.PointerEvent) => {
     if (e.button === 2) return
+    // 点击节点内的输入控件时，允许其正常聚焦输入（不启动拖拽）
+    const target = e.target as HTMLElement
+    if (target.closest('input, textarea, select, button, a, [data-canvas-no-zoom]')) {
+      e.stopPropagation()
+      return
+    }
     e.preventDefault()
     e.stopPropagation()
     setSelectedNodeId(node.id)

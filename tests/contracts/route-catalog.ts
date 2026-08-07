@@ -68,6 +68,7 @@ const ROUTE_FILES = [
   'src/app/api/auth/register/route.ts',
   'src/app/api/cos/image/route.ts',
   'src/app/api/files/[...path]/route.ts',
+  'src/app/api/image-studio/ai-text/route.ts',
   'src/app/api/image-studio/generate/route.ts',
   'src/app/api/image-studio/prompt-optimize/route.ts',
   'src/app/api/image-studio/reverse-prompt/route.ts',

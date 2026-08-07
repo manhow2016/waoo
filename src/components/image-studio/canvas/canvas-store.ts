@@ -33,6 +33,8 @@ export interface CanvasNode {
   text?: string
   /** 文本节点：可选的生成提示词 */
   prompt?: string
+  /** 文本节点渲染模式：plain 纯文本 / markdown Markdown 预览 */
+  renderMode?: 'plain' | 'markdown'
   /** 配置节点：生成配置 */
   genConfig?: {
     model: string
@@ -114,7 +116,7 @@ export function createNode(type: CanvasNodeType, x: number, y: number): CanvasNo
     title: DEFAULT_NODE_TITLES[type],
   }
   if (type === 'text') {
-    return { ...base, text: '', prompt: '' }
+    return { ...base, text: '', prompt: '', renderMode: 'plain' }
   }
   if (type === 'config') {
     return {

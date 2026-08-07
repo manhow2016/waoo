@@ -25,10 +25,12 @@ import {
   type CanvasProject,
 } from './canvas/canvas-store'
 import { useStudioModels, getStudioOutputSizeOptions } from '@/lib/image-studio/models'
-import { studioGenerate } from '@/lib/image-studio/client'
+import { studioGenerate, streamStudioAiText } from '@/lib/image-studio/client'
 import { prepareImageFile, extractImageFiles } from './image-utils'
 import { GlassSlider, StudioSpinner, StudioModal, StudioEmptyState, cx } from './ui'
 import { useRouter } from '@/i18n/navigation'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const ZOOM_MIN = 0.25
 const ZOOM_MAX = 2
@@ -202,7 +204,7 @@ function CanvasEditor(props: {
 }) {
   const t = useTranslations('imageStudio')
   const tc = useTranslations('imageStudio.common')
-  const { imageModels } = useStudioModels()
+  const { imageModels, llmModels } = useStudioModels()
   const { data: session } = useSession()
   const router = useRouter()
 
@@ -214,6 +216,7 @@ function CanvasEditor(props: {
   const [backgroundMode, setBackgroundMode] = useState<'lines' | 'dots' | 'blank'>(props.project.backgroundMode || 'lines')
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null)
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null)
+  const [aiGeneratingNodeId, setAiGeneratingNodeId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState(props.project.name)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -221,6 +224,7 @@ function CanvasEditor(props: {
   const [canRedo, setCanRedo] = useState(false)
 
   const canvasRef = useRef<HTMLDivElement>(null)
+  const aiStreamAbortRef = useRef<(() => void) | null>(null)
 
   // 撤销/重做历史栈
   interface CanvasSnapshot {
@@ -441,6 +445,61 @@ function CanvasEditor(props: {
     window.addEventListener('pointerup', up)
   }
 
+  const handleToggleRenderMode = (nodeId: string) => {
+    commitHistory()
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (n.id !== nodeId) return n
+        return {
+          ...n,
+          renderMode: n.renderMode === 'markdown' ? 'plain' : 'markdown',
+        }
+      }),
+    )
+  }
+
+  const handleAiGenerate = async (nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId)
+    if (!node || aiGeneratingNodeId) return
+    if (!session?.user) {
+      router.push({ pathname: '/auth/signin' })
+      return
+    }
+    const modelKey = llmModels[0]?.value
+    if (!modelKey) {
+      setError(tc('noModels'))
+      return
+    }
+    const prompt = node.prompt?.trim() || node.text?.trim()
+    if (!prompt) {
+      setError(t('canvas.textNode.aiPromptRequired'))
+      return
+    }
+
+    commitHistory()
+    setAiGeneratingNodeId(nodeId)
+    setError(null)
+
+    const handle = streamStudioAiText({
+      modelKey,
+      prompt,
+      existingContent: node.text || '',
+      callbacks: {
+        onDelta: (delta) => {
+          setNodes((prev) =>
+            prev.map((n) => (n.id === nodeId ? { ...n, text: (n.text || '') + delta } : n)),
+          )
+        },
+        onDone: () => setAiGeneratingNodeId(null),
+        onError: (err) => {
+          setError(err.message)
+          setAiGeneratingNodeId(null)
+        },
+      },
+    })
+    aiStreamAbortRef.current = handle.abort
+  }
+
   const handleZoom = (factor: number) => {
     setView((prev) => {
       const zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, prev.zoom * factor))
@@ -646,6 +705,9 @@ function CanvasEditor(props: {
                 }
               }}
               onResizeStart={handleResizeStart}
+              onToggleRenderMode={handleToggleRenderMode}
+              onAiGenerate={(nodeId) => void handleAiGenerate(nodeId)}
+              aiGenerating={aiGeneratingNodeId === node.id}
             />
           ))}
         </div>
@@ -908,6 +970,9 @@ function CanvasNodeView(props: {
   onEndConnect: (targetId: string) => void
   onUploadImage: (files: File[]) => Promise<void>
   onResizeStart: (nodeId: string, corner: string, e: React.PointerEvent) => void
+  onToggleRenderMode: (nodeId: string) => void
+  onAiGenerate: (nodeId: string) => void
+  aiGenerating: boolean
 }) {
   const t = useTranslations('imageStudio')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -962,13 +1027,50 @@ function CanvasNodeView(props: {
       >
         {props.node.type === 'text' && (
           <>
-            <textarea
-              value={props.node.text || ''}
-              onChange={(e) => props.onUpdate({ text: e.target.value })}
-              placeholder={t('canvas.textNode.contentPlaceholder')}
-              rows={4}
-              className="glass-textarea-base w-full px-2 py-1.5 text-xs"
-            />
+            {/* 工具栏：Markdown 切换 + AI 生成 */}
+            <div
+              className="absolute right-1 top-1 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                title={props.node.renderMode === 'markdown' ? t('canvas.textNode.toPlain') : t('canvas.textNode.toMarkdown')}
+                onClick={() => props.onToggleRenderMode(props.node.id)}
+                className="glass-btn-base glass-btn-ghost p-1 rounded bg-[var(--glass-bg-surface-strong)]/90"
+              >
+                <span className="text-[10px] font-bold">
+                  {props.node.renderMode === 'markdown' ? 'Tx' : 'Md'}
+                </span>
+              </button>
+              <button
+                type="button"
+                title={t('canvas.textNode.aiGenerate')}
+                onClick={() => props.onAiGenerate(props.node.id)}
+                disabled={props.aiGenerating}
+                className="glass-btn-base glass-btn-ghost p-1 rounded bg-[var(--glass-bg-surface-strong)]/90 disabled:opacity-50"
+              >
+                {props.aiGenerating ? (
+                  <StudioSpinner className="w-3 h-3" />
+                ) : (
+                  <AppIcon name="sparkles" className="w-3 h-3" />
+                )}
+              </button>
+            </div>
+
+            {props.node.renderMode === 'markdown' ? (
+              <div className="max-h-[260px] overflow-y-auto text-xs leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--glass-stroke-strong)] [&_blockquote]:pl-2 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-[var(--glass-bg-muted)] [&_code]:px-1 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-[var(--glass-bg-muted)] [&_pre]:p-2 [&_a]:text-[var(--glass-tone-info-fg)] [&_a]:underline">
+                <MarkdownRenderer content={props.node.text || ''} />
+              </div>
+            ) : (
+              <textarea
+                value={props.node.text || ''}
+                onChange={(e) => props.onUpdate({ text: e.target.value })}
+                placeholder={t('canvas.textNode.contentPlaceholder')}
+                rows={4}
+                className="glass-textarea-base w-full px-2 py-1.5 text-xs"
+              />
+            )}
             <input
               type="text"
               value={props.node.prompt || ''}
@@ -976,6 +1078,11 @@ function CanvasNodeView(props: {
               placeholder={t('canvas.textNode.promptPlaceholder')}
               className="glass-input-base w-full px-2 py-1.5 text-xs"
             />
+            {props.node.renderMode === 'markdown' && (
+              <p className="text-[10px] text-[var(--glass-text-tertiary)]">
+                {t('canvas.textNode.markdownHint')}
+              </p>
+            )}
           </>
         )}
 
@@ -1157,6 +1264,15 @@ function NodeTypeIcon(props: { type: CanvasNodeType }) {
     textAnnotation: 'edit',
   }
   return <AppIcon name={icons[props.type] as never} className="w-3 h-3" />
+}
+
+/** Markdown 渲染（react-markdown + remark-gfm） */
+function MarkdownRenderer({ content }: { content: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      {content}
+    </ReactMarkdown>
+  )
 }
 
 function ConfigNodeBody(props: {

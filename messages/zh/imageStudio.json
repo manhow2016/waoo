@@ -122,7 +122,12 @@
     },
     "textNode": {
       "contentPlaceholder": "输入文本内容…",
-      "promptPlaceholder": "输入生成提示词（可选）…"
+      "promptPlaceholder": "输入生成提示词（可选）…",
+      "toMarkdown": "切换为 Markdown 预览",
+      "toPlain": "切换为纯文本",
+      "aiGenerate": "AI 生成文本",
+      "aiPromptRequired": "请先输入生成提示词",
+      "markdownHint": "Markdown 预览模式，点 Tx 返回编辑"
     },
     "imageNode": {
       "dropHint": "拖入图片或点击上传",

@@ -122,7 +122,12 @@
     },
     "textNode": {
       "contentPlaceholder": "Type text content…",
-      "promptPlaceholder": "Type generation prompt (optional)…"
+      "promptPlaceholder": "Type generation prompt (optional)…",
+      "toMarkdown": "Switch to Markdown preview",
+      "toPlain": "Switch to plain text",
+      "aiGenerate": "AI generate text",
+      "aiPromptRequired": "Enter a generation prompt first",
+      "markdownHint": "Markdown preview mode. Click Tx to edit."
     },
     "imageNode": {
       "dropHint": "Drop an image or click to upload",

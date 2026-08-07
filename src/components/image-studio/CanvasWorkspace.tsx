@@ -222,9 +222,20 @@ function CanvasEditor(props: {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+  const [selectionBox, setSelectionBox] = useState<{
+    startX: number
+    startY: number
+    currentX: number
+    currentY: number
+  } | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const aiStreamAbortRef = useRef<(() => void) | null>(null)
+  const selectionBoxRef = useRef<typeof selectionBox>(null)
+
+  useEffect(() => {
+    selectionBoxRef.current = selectionBox
+  }, [selectionBox])
 
   // 撤销/重做历史栈
   interface CanvasSnapshot {
@@ -379,18 +390,57 @@ function CanvasEditor(props: {
   }
 
   const handleBackgroundPointerDown = (e: React.PointerEvent) => {
-    // 仅当点击画布空白区域（非节点、非输入控件）时启动平移
+    // 仅当点击画布空白区域（非节点、非输入控件）时启动平移/框选
     const target = e.target as HTMLElement
     if (target.closest('[data-node-id]')) return
     if (target.closest('input, textarea, select, button, a')) return
     setSelectedNodeId(null)
     setConnectingFrom(null)
-    const start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
     const shouldPan = interactionMode === 'pan' || e.button === 1
-    const move = (ev: PointerEvent) => {
-      if (shouldPan) {
-        setView((prev) => ({ ...prev, x: start.vx + (ev.clientX - start.x), y: start.vy + (ev.clientY - start.y) }))
+    const worldStartX = (e.clientX - rect.left - view.x) / view.zoom
+    const worldStartY = (e.clientY - rect.top - view.y) / view.zoom
+
+    // select 模式：拖拽空白处框选节点
+    if (!shouldPan) {
+      const move = (ev: PointerEvent) => {
+        setSelectionBox({
+          startX: worldStartX,
+          startY: worldStartY,
+          currentX: (ev.clientX - rect.left - view.x) / view.zoom,
+          currentY: (ev.clientY - rect.top - view.y) / view.zoom,
+        })
       }
+      const up = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', up)
+        setSelectionBox(null)
+        // 框选结束时选中框内节点
+        setNodes((prev) => {
+          if (selectionBoxRef.current) {
+            const { startX, startY, currentX, currentY } = selectionBoxRef.current
+            const minX = Math.min(startX, currentX)
+            const maxX = Math.max(startX, currentX)
+            const minY = Math.min(startY, currentY)
+            const maxY = Math.max(startY, currentY)
+            const hit = prev.find((n) =>
+              n.x >= minX && n.x + n.width <= maxX && n.y >= minY && n.y + n.height <= maxY,
+            )
+            if (hit) setSelectedNodeId(hit.id)
+          }
+          return prev
+        })
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', up)
+      return
+    }
+
+    // pan 模式：平移视图
+    const start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
+    const move = (ev: PointerEvent) => {
+      setView((prev) => ({ ...prev, x: start.vx + (ev.clientX - start.x), y: start.vy + (ev.clientY - start.y) }))
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
@@ -635,7 +685,10 @@ function CanvasEditor(props: {
         onPointerDown={handleBackgroundPointerDown}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropOnCanvas}
-        className="relative h-[calc(100vh-260px)] min-h-[560px] rounded-2xl overflow-hidden border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-muted)]/20"
+        className={cx(
+          'relative h-[calc(100vh-260px)] min-h-[560px] rounded-2xl overflow-hidden border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-muted)]/20 select-none',
+          interactionMode === 'pan' ? 'cursor-grab' : 'cursor-crosshair',
+        )}
         style={{ touchAction: 'none' }}
       >
         {/* 背景（网格/圆点/空白，随缩放同步） */}
@@ -710,6 +763,20 @@ function CanvasEditor(props: {
               aiGenerating={aiGeneratingNodeId === node.id}
             />
           ))}
+
+          {/* 框选矩形 */}
+          {selectionBox && (
+            <div
+              className="pointer-events-none absolute rounded-md border-2 border-[var(--glass-tone-info-fg)]"
+              style={{
+                left: Math.min(selectionBox.startX, selectionBox.currentX),
+                top: Math.min(selectionBox.startY, selectionBox.currentY),
+                width: Math.abs(selectionBox.currentX - selectionBox.startX),
+                height: Math.abs(selectionBox.currentY - selectionBox.startY),
+                background: 'color-mix(in srgb, var(--glass-tone-info-fg) 12%, transparent)',
+              }}
+            />
+          )}
         </div>
 
         {/* 空画布提示 */}
@@ -1013,20 +1080,21 @@ function CanvasNodeView(props: {
     >
       {/* 头部：显示节点标题 */}
       <div className="flex min-h-7 items-center gap-2 px-2.5 py-1 text-[11px] font-medium text-[var(--glass-text-tertiary)] border-b border-[var(--glass-stroke-soft)] cursor-grab select-none">
-        <NodeTypeIcon type={props.node.type} />
         <span className="truncate">{props.node.title || nodeTypeLabel(props.node.type)}</span>
       </div>
 
       {/* 内容区 */}
       <div
         className={cx(
-          'relative min-h-0 flex-1 p-2 space-y-2',
-          props.node.type === 'config' && 'overflow-y-auto',
+          'relative min-h-0 flex-1',
+          props.node.type === 'config' && 'p-2 space-y-2 overflow-y-auto',
+          props.node.type === 'text' && 'p-0',
+          (props.node.type === 'image' || props.node.type === 'textAnnotation') && 'p-2',
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {props.node.type === 'text' && (
-          <>
+          <div className="relative h-full w-full">
             {/* 工具栏：Markdown 切换 + AI 生成 */}
             <div
               className="absolute right-1 top-1 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
@@ -1037,7 +1105,7 @@ function CanvasNodeView(props: {
                 type="button"
                 title={props.node.renderMode === 'markdown' ? t('canvas.textNode.toPlain') : t('canvas.textNode.toMarkdown')}
                 onClick={() => props.onToggleRenderMode(props.node.id)}
-                className="glass-btn-base glass-btn-ghost p-1 rounded bg-[var(--glass-bg-surface-strong)]/90"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--glass-bg-surface-strong)]/90 p-1 text-[var(--glass-text-secondary)] shadow-sm transition-colors hover:bg-[var(--glass-bg-muted)] hover:text-[var(--glass-text-primary)]"
               >
                 <span className="text-[10px] font-bold">
                   {props.node.renderMode === 'markdown' ? 'Tx' : 'Md'}
@@ -1048,7 +1116,7 @@ function CanvasNodeView(props: {
                 title={t('canvas.textNode.aiGenerate')}
                 onClick={() => props.onAiGenerate(props.node.id)}
                 disabled={props.aiGenerating}
-                className="glass-btn-base glass-btn-ghost p-1 rounded bg-[var(--glass-bg-surface-strong)]/90 disabled:opacity-50"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--glass-bg-surface-strong)]/90 p-1 text-[var(--glass-text-secondary)] shadow-sm transition-colors hover:bg-[var(--glass-bg-muted)] hover:text-[var(--glass-text-primary)] disabled:opacity-50"
               >
                 {props.aiGenerating ? (
                   <StudioSpinner className="w-3 h-3" />
@@ -1058,32 +1126,32 @@ function CanvasNodeView(props: {
               </button>
             </div>
 
-            {props.node.renderMode === 'markdown' ? (
-              <div className="max-h-[260px] overflow-y-auto text-xs leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--glass-stroke-strong)] [&_blockquote]:pl-2 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-[var(--glass-bg-muted)] [&_code]:px-1 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-[var(--glass-bg-muted)] [&_pre]:p-2 [&_a]:text-[var(--glass-tone-info-fg)] [&_a]:underline">
-                <MarkdownRenderer content={props.node.text || ''} />
+            {/* 内容 + 提示词 */}
+            <div className="flex h-full flex-col gap-0">
+              {props.node.renderMode === 'markdown' ? (
+                <div className="min-h-0 flex-1 overflow-auto px-2.5 py-1.5 text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--glass-stroke-strong)] [&_blockquote]:pl-2 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-[var(--glass-bg-muted)] [&_code]:px-1 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-[var(--glass-bg-muted)] [&_pre]:p-2 [&_a]:text-[var(--glass-tone-info-fg)] [&_a]:underline">
+                  <MarkdownRenderer content={props.node.text || ''} />
+                </div>
+              ) : (
+                <textarea
+                  value={props.node.text || ''}
+                  onChange={(e) => props.onUpdate({ text: e.target.value })}
+                  placeholder={t('canvas.textNode.contentPlaceholder')}
+                  className="min-h-0 w-full flex-1 cursor-text resize-none bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-[var(--glass-text-tertiary)]"
+                />
+              )}
+              {/* 底部提示词输入 */}
+              <div className="border-t border-[var(--glass-stroke-soft)] px-2.5 py-1">
+                <input
+                  type="text"
+                  value={props.node.prompt || ''}
+                  onChange={(e) => props.onUpdate({ prompt: e.target.value })}
+                  placeholder={t('canvas.textNode.promptPlaceholder')}
+                  className="w-full bg-transparent text-xs outline-none placeholder:text-[var(--glass-text-tertiary)]"
+                />
               </div>
-            ) : (
-              <textarea
-                value={props.node.text || ''}
-                onChange={(e) => props.onUpdate({ text: e.target.value })}
-                placeholder={t('canvas.textNode.contentPlaceholder')}
-                rows={4}
-                className="glass-textarea-base w-full px-2 py-1.5 text-xs"
-              />
-            )}
-            <input
-              type="text"
-              value={props.node.prompt || ''}
-              onChange={(e) => props.onUpdate({ prompt: e.target.value })}
-              placeholder={t('canvas.textNode.promptPlaceholder')}
-              className="glass-input-base w-full px-2 py-1.5 text-xs"
-            />
-            {props.node.renderMode === 'markdown' && (
-              <p className="text-[10px] text-[var(--glass-text-tertiary)]">
-                {t('canvas.textNode.markdownHint')}
-              </p>
-            )}
-          </>
+            </div>
+          </div>
         )}
 
         {props.node.type === 'textAnnotation' && (
@@ -1254,16 +1322,6 @@ function CanvasBackground(props: { mode: 'lines' | 'dots'; view: { x: number; y:
       }}
     />
   )
-}
-
-function NodeTypeIcon(props: { type: CanvasNodeType }) {
-  const icons: Record<CanvasNodeType, string> = {
-    image: 'image',
-    text: 'fileText',
-    config: 'sparkles',
-    textAnnotation: 'edit',
-  }
-  return <AppIcon name={icons[props.type] as never} className="w-3 h-3" />
 }
 
 /** Markdown 渲染（react-markdown + remark-gfm） */

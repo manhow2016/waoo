@@ -6,6 +6,7 @@ import { normalizeToBase64ForGeneration } from '@/lib/media/outbound-image'
 import { extractStorageKey, getSignedUrl, toFetchableUrl, uploadObject } from '@/lib/storage'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { synthesizeWithBailianTTS } from '@/lib/providers/bailian'
+import { synthesizeWithToken61TTS } from '@/lib/providers/token61/tts'
 import {
   parseSpeakerVoiceMap,
   resolveVoiceBindingForProvider,
@@ -260,6 +261,32 @@ export async function generateVoiceLine(params: {
     generated = {
       audioData,
       audioDuration: result.audioDuration ?? getWavDurationFromBuffer(audioData),
+    }
+  } else if (providerKey === 'token61') {
+    if (!voiceBinding || voiceBinding.provider !== 'token61') {
+      throw new Error('请先为该发言人绑定 token61 音色（需先进行声音设计）')
+    }
+    const providerConfig = await getProviderConfig(params.userId, audioSelection.provider)
+    const result = await synthesizeWithToken61TTS({
+      text,
+      voiceId: voiceBinding.voiceId,
+      modelId: audioSelection.modelId,
+      baseUrl: providerConfig.baseUrl,
+      responseFormat: 'wav',
+    }, providerConfig.apiKey)
+    if (!result.success || !result.audioData) {
+      const rawError = result.error || 'TOKEN61_TTS_FAILED'
+      // token61 中继未配置 TTS 渠道时给出清晰提示
+      if (/TTS speak request failed|bad_response_status_code|invalid relay format|openai_error/i.test(rawError)) {
+        throw new Error(`配音暂不可用：token61 中转未正确配置 TTS 渠道（${rawError}）。请联系 token61 平台确认，或改在设置中心配置 bailian 或 fal provider。`)
+      }
+      throw new Error(rawError)
+    }
+
+    const audioData = result.audioData
+    generated = {
+      audioData,
+      audioDuration: getWavDurationFromBuffer(audioData),
     }
   } else {
     throw new Error(`AUDIO_PROVIDER_UNSUPPORTED: ${audioSelection.provider}`)

@@ -63,7 +63,7 @@ export const GET = apiHandler(async (
 
     const previewAudioUrl = voice.previewAudioUrl ? signUrlIfNeeded(voice.previewAudioUrl) : undefined
     speakerVoices[speaker] = {
-      provider: 'bailian',
+      provider: voice.provider === 'token61' ? 'token61' : 'bailian',
       voiceType: voice.voiceType,
       voiceId: voice.voiceId,
       ...(previewAudioUrl ? { previewAudioUrl } : {}),
@@ -92,7 +92,7 @@ export const PATCH = apiHandler(async (
   const speaker = readTrimmedString(body?.speaker) ?? ''
   const voiceType = readTrimmedString(body?.voiceType) ?? 'uploaded'
   const providerRaw = readTrimmedString(body?.provider)?.toLowerCase() ?? null
-  if (!providerRaw || (providerRaw !== 'fal' && providerRaw !== 'bailian')) {
+  if (!providerRaw || (providerRaw !== 'fal' && providerRaw !== 'bailian' && providerRaw !== 'token61')) {
     throw new ApiError('INVALID_PARAMS')
   }
   const provider = providerRaw
@@ -109,7 +109,7 @@ export const PATCH = apiHandler(async (
   if (provider === 'fal' && !audioUrl) {
     throw new ApiError('INVALID_PARAMS')
   }
-  if (provider === 'bailian' && !voiceId) {
+  if ((provider === 'bailian' || provider === 'token61') && !voiceId) {
     throw new ApiError('INVALID_PARAMS')
   }
 
@@ -151,7 +151,7 @@ export const PATCH = apiHandler(async (
       : undefined
 
     nextVoiceEntry = {
-      provider: 'bailian',
+      provider: provider as 'bailian' | 'token61',
       voiceType,
       voiceId: voiceId!,
       ...(previewAudioUrlToStore ? { previewAudioUrl: previewAudioUrlToStore } : {}),

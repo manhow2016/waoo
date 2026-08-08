@@ -1,6 +1,6 @@
 type VoiceSource = 'character' | 'speaker'
 
-export type SupportedAudioProviderKey = 'fal' | 'bailian'
+export type SupportedAudioProviderKey = 'fal' | 'bailian' | 'token61'
 
 export interface CharacterVoiceFields {
   customVoiceUrl?: string | null
@@ -28,7 +28,14 @@ export type BailianSpeakerVoiceEntry = {
   previewAudioUrl?: string
 }
 
-export type SpeakerVoiceEntry = FalSpeakerVoiceEntry | BailianSpeakerVoiceEntry
+export type Token61SpeakerVoiceEntry = {
+  provider: 'token61'
+  voiceType: string
+  voiceId: string
+  previewAudioUrl?: string
+}
+
+export type SpeakerVoiceEntry = FalSpeakerVoiceEntry | BailianSpeakerVoiceEntry | Token61SpeakerVoiceEntry
 export type SpeakerVoiceMap = Record<string, SpeakerVoiceEntry>
 
 export type FalVoiceGenerationBinding = {
@@ -43,7 +50,16 @@ export type BailianVoiceGenerationBinding = {
   voiceId: string
 }
 
-export type VoiceGenerationBinding = FalVoiceGenerationBinding | BailianVoiceGenerationBinding
+export type Token61VoiceGenerationBinding = {
+  provider: 'token61'
+  source: VoiceSource
+  voiceId: string
+}
+
+export type VoiceGenerationBinding =
+  | FalVoiceGenerationBinding
+  | BailianVoiceGenerationBinding
+  | Token61VoiceGenerationBinding
 
 export type SpeakerVoicePatch =
   | {
@@ -94,6 +110,19 @@ function normalizeRawSpeakerVoiceEntry(raw: unknown, speaker: string): SpeakerVo
     const preview = previewAudioUrl || audioUrl
     return {
       provider: 'bailian',
+      voiceType,
+      voiceId,
+      ...(preview ? { previewAudioUrl: preview } : {}),
+    }
+  }
+
+  if (provider === 'token61') {
+    if (!voiceId) {
+      throw new Error(`SPEAKER_VOICE_ENTRY_INVALID_TOKEN61_VOICE_ID: ${speaker}`)
+    }
+    const preview = previewAudioUrl || audioUrl
+    return {
+      provider: 'token61',
       voiceType,
       voiceId,
       ...(preview ? { previewAudioUrl: preview } : {}),
@@ -151,7 +180,7 @@ export function parseSpeakerVoiceMap(raw: string | null | undefined): SpeakerVoi
 }
 
 function normalizeProviderKey(providerKey: string): SupportedAudioProviderKey | null {
-  if (providerKey === 'fal' || providerKey === 'bailian') {
+  if (providerKey === 'fal' || providerKey === 'bailian' || providerKey === 'token61') {
     return providerKey
   }
   return null
@@ -175,6 +204,15 @@ function toBailianBinding(source: VoiceSource, voiceId: string | null): BailianV
   }
 }
 
+function toToken61Binding(source: VoiceSource, voiceId: string | null): Token61VoiceGenerationBinding | null {
+  if (!voiceId) return null
+  return {
+    provider: 'token61',
+    source,
+    voiceId,
+  }
+}
+
 export function resolveVoiceBindingForProvider(params: {
   providerKey: string
   character?: CharacterVoiceFields | null
@@ -191,6 +229,14 @@ export function resolveVoiceBindingForProvider(params: {
     if (fromCharacter) return fromCharacter
     if (params.speakerVoice?.provider !== 'fal') return null
     return toFalBinding('speaker', readTrimmedString(params.speakerVoice.audioUrl))
+  }
+
+  // bailian 与 token61 均为 voiceId 语义（QwenTTS / AI 设计音色）
+  if (providerKey === 'token61') {
+    const fromCharacter = toToken61Binding('character', characterVoiceId)
+    if (fromCharacter) return fromCharacter
+    if (params.speakerVoice?.provider !== 'token61') return null
+    return toToken61Binding('speaker', readTrimmedString(params.speakerVoice.voiceId))
   }
 
   const fromCharacter = toBailianBinding('character', characterVoiceId)

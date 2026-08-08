@@ -70,6 +70,13 @@ function validateSpeakerVoiceForProvider(
     }
   }
 
+  if (providerKey === 'token61') {
+    return {
+      ok: false,
+      message: '请先为该发言人绑定 token61 音色（需先进行声音设计）',
+    }
+  }
+
   return {
     ok: false,
     message: '请先为该发言人设置参考音频',

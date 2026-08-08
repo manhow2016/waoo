@@ -10,9 +10,11 @@ import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
 
-// 声音设计（自定义音色创建）依赖阿里百炼 DashScope 的 customization 接口。
-// 实测 token61 等 OpenAI 兼容中转不支持该接口（404），因此仅允许 bailian provider。
-const VOICE_DESIGN_PROVIDER_KEYS = ['bailian']
+// 声音设计（自定义音色创建）：
+// - bailian：DashScope customization 接口（POST /services/audio/tts/customization）
+// - token61：NEW-API 中转（POST /v1/audio/design）
+// 按优先级动态解析第一个已配置且带 API key 的 provider。
+const VOICE_DESIGN_PROVIDER_KEYS = ['bailian', 'token61']
 
 function readRequiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) {
@@ -52,16 +54,21 @@ export async function handleVoiceDesignTask(job: Job<TaskJobData>) {
 
   const providerConfig = await findProviderConfig(job.data.userId, VOICE_DESIGN_PROVIDER_KEYS)
   if (!providerConfig) {
-    throw new Error('VOICE_DESIGN_PROVIDER_NOT_CONFIGURED: 声音设计依赖阿里百炼，请在设置中心配置 bailian（阿里百炼）API Key')
+    throw new Error('VOICE_DESIGN_PROVIDER_NOT_CONFIGURED: 声音设计需要配置 bailian（阿里百炼）或 token61 API Key')
   }
+
+  const providerKey = providerConfig.id.includes(':')
+    ? providerConfig.id.slice(0, providerConfig.id.indexOf(':'))
+    : providerConfig.id
 
   const input: VoiceDesignInput = {
     voicePrompt,
     previewText,
     preferredName,
     language,
-    // 传入 provider 的 baseUrl，支持用户自建兼容中转
+    // 传入 provider 的 baseUrl 与 key，区分 token61 / bailian 接口
     baseUrl: providerConfig.baseUrl,
+    providerKey: providerKey.toLowerCase(),
   }
   const designed = await createVoiceDesign(input, providerConfig.apiKey)
   if (!designed.success) {

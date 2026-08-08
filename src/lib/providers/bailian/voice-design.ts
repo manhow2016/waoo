@@ -7,6 +7,8 @@ export interface VoiceDesignInput {
   language?: 'zh' | 'en'
   /** 可选的 DashScope 兼容 baseUrl（默认官方） */
   baseUrl?: string
+  /** provider key：bailian（DashScope 接口）或 token61（NEW-API /audio/design 接口） */
+  providerKey?: string
 }
 
 export interface VoiceDesignResult {
@@ -29,7 +31,7 @@ export async function createVoiceDesign(
   if (!apiKey) {
     return {
       success: false,
-      error: '请配置阿里百炼 API Key',
+      error: '请配置声音设计服务 API Key',
     }
   }
 
@@ -51,11 +53,19 @@ export async function createVoiceDesign(
 
   _ulogInfo('[VoiceDesign] 请求体:', JSON.stringify(requestBody, null, 2))
 
+  // providerKey 决定接口路径与响应格式：
+  // - token61：POST {baseUrl}/audio/design，响应 { voice, preview_audio: { data, type } }
+  // - bailian/其它：POST DashScope /services/audio/tts/customization，响应 { output: {...} }
+  const isToken61 = input.providerKey === 'token61'
+  const endpointBase = input.baseUrl?.trim()
+    ? input.baseUrl.replace(/\/+$/, '')
+    : 'https://dashscope.aliyuncs.com/api/v1'
+  const endpoint = isToken61
+    ? `${endpointBase}/audio/design`
+    : `${endpointBase}/services/audio/tts/customization`
+
   try {
-    const endpointBase = input.baseUrl?.trim()
-      ? input.baseUrl.replace(/\/+$/, '')
-      : 'https://dashscope.aliyuncs.com/api/v1'
-    const response = await fetch(`${endpointBase}/services/audio/tts/customization`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -64,40 +74,68 @@ export async function createVoiceDesign(
       body: JSON.stringify(requestBody),
     })
 
-    const data = await response.json() as {
-      output?: {
-        voice?: string
-        target_model?: string
-        preview_audio?: {
-          data?: string
-          sample_rate?: number
-          response_format?: string
-        }
-      }
-      usage?: { count?: number }
-      request_id?: string
-      code?: string
-      message?: string
+    const rawText = await response.text().catch(() => '')
+    let data: Record<string, unknown> = {}
+    try {
+      data = JSON.parse(rawText) as Record<string, unknown>
+    } catch {
+      // 非 JSON 响应
     }
 
-    if (response.ok && data.output) {
+    if (!response.ok) {
+      return {
+        success: false,
+        error: readErrorMessage(data) || `声音设计 API 调用失败 (${response.status})`,
+        errorCode: readErrorCode(data),
+      }
+    }
+
+    // token61 响应：{ voice, preview_audio: { data, type } }
+    if (isToken61) {
+      const voiceId = typeof data.voice === 'string' ? data.voice.trim() : ''
+      const preview = data.preview_audio as { data?: unknown; type?: unknown } | undefined
+      const audioBase64 = typeof preview?.data === 'string' ? preview.data : ''
+      if (voiceId && audioBase64) {
+        return {
+          success: true,
+          voiceId,
+          targetModel: 'qwen3-tts-vd-2026-01-26',
+          audioBase64,
+          responseFormat: typeof preview?.type === 'string' ? preview.type : 'wav',
+          sampleRate: 24000,
+        }
+      }
+      return {
+        success: false,
+        error: readErrorMessage(data) || '声音设计返回缺少 voice 或 preview_audio',
+        errorCode: readErrorCode(data),
+      }
+    }
+
+    // bailian 响应：{ output: { voice, preview_audio: { data, sample_rate, response_format } }, request_id }
+    const output = data.output as {
+      voice?: unknown
+      target_model?: unknown
+      preview_audio?: { data?: unknown; sample_rate?: unknown; response_format?: unknown }
+    } | undefined
+    const voiceId = typeof output?.voice === 'string' ? output.voice.trim() : ''
+    const audioBase64 = typeof output?.preview_audio?.data === 'string' ? output.preview_audio.data : ''
+    if (voiceId && audioBase64) {
       return {
         success: true,
-        voiceId: data.output.voice,
-        targetModel: data.output.target_model,
-        audioBase64: data.output.preview_audio?.data,
-        sampleRate: data.output.preview_audio?.sample_rate,
-        responseFormat: data.output.preview_audio?.response_format,
-        usageCount: data.usage?.count,
-        requestId: data.request_id,
+        voiceId,
+        targetModel: typeof output?.target_model === 'string' ? output.target_model : undefined,
+        audioBase64,
+        sampleRate: typeof output?.preview_audio?.sample_rate === 'number' ? output.preview_audio.sample_rate : undefined,
+        responseFormat: typeof output?.preview_audio?.response_format === 'string' ? output.preview_audio.response_format : undefined,
+        requestId: typeof data.request_id === 'string' ? data.request_id : undefined,
       }
     }
 
     return {
       success: false,
-      error: data.message || '声音设计 API 调用失败',
-      errorCode: data.code,
-      requestId: data.request_id,
+      error: readErrorMessage(data) || '声音设计 API 调用失败',
+      errorCode: readErrorCode(data),
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '网络请求失败'
@@ -106,6 +144,29 @@ export async function createVoiceDesign(
       error: message || '网络请求失败',
     }
   }
+}
+
+function readErrorMessage(data: Record<string, unknown>): string | undefined {
+  const candidates = [
+    data.message,
+    data.error_message,
+    (data.error as Record<string, unknown> | undefined)?.message,
+  ]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
+  }
+  return undefined
+}
+
+function readErrorCode(data: Record<string, unknown>): string | undefined {
+  const candidates = [
+    data.code,
+    (data.error as Record<string, unknown> | undefined)?.code,
+  ]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
+  }
+  return undefined
 }
 
 export function validateVoicePrompt(voicePrompt: string): { valid: boolean; error?: string } {

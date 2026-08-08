@@ -49,7 +49,7 @@ describe('worker voice-design behavior', () => {
     vi.clearAllMocks()
     bailianMock.validateVoicePrompt.mockReturnValue({ valid: true })
     bailianMock.validatePreviewText.mockReturnValue({ valid: true })
-    apiConfigMock.findProviderConfig.mockResolvedValue({ apiKey: 'bailian-key', baseUrl: 'https://dashscope.aliyuncs.com/api/v1' })
+    apiConfigMock.findProviderConfig.mockResolvedValue({ id: 'bailian', apiKey: 'bailian-key', baseUrl: 'https://dashscope.aliyuncs.com/api/v1' })
     bailianMock.createVoiceDesign.mockResolvedValue({
       success: true,
       voiceId: 'voice-id-1',
@@ -96,13 +96,14 @@ describe('worker voice-design behavior', () => {
 
     const result = await handleVoiceDesignTask(job)
 
-    expect(apiConfigMock.findProviderConfig).toHaveBeenCalledWith('user-1', ['bailian'])
+    expect(apiConfigMock.findProviderConfig).toHaveBeenCalledWith('user-1', ['bailian', 'token61'])
     expect(bailianMock.createVoiceDesign).toHaveBeenCalledWith({
       voicePrompt: 'calm female narrator',
       previewText: 'hello world',
       preferredName: 'custom_name',
       language: 'en',
       baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+      providerKey: 'bailian',
     }, 'bailian-key')
 
     expect(result).toEqual(expect.objectContaining({

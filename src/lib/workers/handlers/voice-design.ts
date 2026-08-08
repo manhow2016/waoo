@@ -5,10 +5,15 @@ import {
   validateVoicePrompt,
   type VoiceDesignInput,
 } from '@/lib/providers/bailian/voice-design'
-import { getProviderConfig } from '@/lib/api-config'
+import { findProviderConfig } from '@/lib/api-config'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
+
+// 声音设计（自定义音色创建）依赖阿里百炼 DashScope 的 customization 接口。
+// 从用户已配置的 provider 中按优先级解析：优先 bailian，其次 token61 等
+// 兼容中转（baseUrl 取自 provider 配置）。
+const VOICE_DESIGN_PROVIDER_KEYS = ['bailian', 'token61']
 
 function readRequiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) {
@@ -46,14 +51,20 @@ export async function handleVoiceDesignTask(job: Job<TaskJobData>) {
   })
   await assertTaskActive(job, 'voice_design_submit')
 
-  const { apiKey } = await getProviderConfig(job.data.userId, 'bailian')
+  const providerConfig = await findProviderConfig(job.data.userId, VOICE_DESIGN_PROVIDER_KEYS)
+  if (!providerConfig) {
+    throw new Error('VOICE_DESIGN_PROVIDER_NOT_CONFIGURED: 声音设计依赖阿里百炼，请在设置中心配置 bailian（阿里百炼）API Key')
+  }
+
   const input: VoiceDesignInput = {
     voicePrompt,
     previewText,
     preferredName,
     language,
+    // 传入 provider 的 baseUrl，支持用户自建兼容中转
+    baseUrl: providerConfig.baseUrl,
   }
-  const designed = await createVoiceDesign(input, apiKey)
+  const designed = await createVoiceDesign(input, providerConfig.apiKey)
   if (!designed.success) {
     throw new Error(designed.error || '声音设计失败')
   }

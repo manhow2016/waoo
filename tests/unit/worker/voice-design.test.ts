@@ -9,7 +9,7 @@ const bailianMock = vi.hoisted(() => ({
 }))
 
 const apiConfigMock = vi.hoisted(() => ({
-  getProviderConfig: vi.fn(),
+  findProviderConfig: vi.fn(),
 }))
 
 const workerMock = vi.hoisted(() => ({
@@ -49,7 +49,7 @@ describe('worker voice-design behavior', () => {
     vi.clearAllMocks()
     bailianMock.validateVoicePrompt.mockReturnValue({ valid: true })
     bailianMock.validatePreviewText.mockReturnValue({ valid: true })
-    apiConfigMock.getProviderConfig.mockResolvedValue({ apiKey: 'bailian-key' })
+    apiConfigMock.findProviderConfig.mockResolvedValue({ apiKey: 'bailian-key', baseUrl: 'https://dashscope.aliyuncs.com/api/v1' })
     bailianMock.createVoiceDesign.mockResolvedValue({
       success: true,
       voiceId: 'voice-id-1',
@@ -77,7 +77,16 @@ describe('worker voice-design behavior', () => {
     await expect(handleVoiceDesignTask(job)).rejects.toThrow('bad prompt')
   })
 
-  it('success path -> submits normalized input and returns typed result', async () => {
+  it('missing provider config -> clear error', async () => {
+    apiConfigMock.findProviderConfig.mockResolvedValue(null)
+    const job = buildJob(TASK_TYPE.VOICE_DESIGN, {
+      voicePrompt: 'calm voice',
+      previewText: 'hello world',
+    })
+    await expect(handleVoiceDesignTask(job)).rejects.toThrow('VOICE_DESIGN_PROVIDER_NOT_CONFIGURED')
+  })
+
+  it('success path -> resolves provider dynamically and returns typed result', async () => {
     const job = buildJob(TASK_TYPE.ASSET_HUB_VOICE_DESIGN, {
       voicePrompt: '  calm female narrator  ',
       previewText: '  hello world  ',
@@ -87,12 +96,13 @@ describe('worker voice-design behavior', () => {
 
     const result = await handleVoiceDesignTask(job)
 
-    expect(apiConfigMock.getProviderConfig).toHaveBeenCalledWith('user-1', 'bailian')
+    expect(apiConfigMock.findProviderConfig).toHaveBeenCalledWith('user-1', ['bailian', 'token61'])
     expect(bailianMock.createVoiceDesign).toHaveBeenCalledWith({
       voicePrompt: 'calm female narrator',
       previewText: 'hello world',
       preferredName: 'custom_name',
       language: 'en',
+      baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
     }, 'bailian-key')
 
     expect(result).toEqual(expect.objectContaining({

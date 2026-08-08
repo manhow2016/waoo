@@ -460,6 +460,31 @@ export async function getProviderConfig(userId: string, providerId: string): Pro
 }
 
 /**
+ * 按 provider key 前缀查找已配置的 provider（不抛错）。
+ * 用于需要"任一可用 provider"的场景（如 voice-design 动态解析）。
+ */
+export async function findProviderConfig(
+  userId: string,
+  providerKeys: string[],
+): Promise<ProviderConfig | null> {
+  const { providers } = await readUserConfig(userId)
+  for (const provider of providers) {
+    const providerKey = getProviderKey(provider.id)
+    if (providerKeys.includes(providerKey) && provider.apiKey) {
+      return {
+        id: provider.id,
+        name: provider.name,
+        apiKey: decryptApiKey(provider.apiKey),
+        baseUrl: normalizeProviderBaseUrl(provider.id, provider.baseUrl),
+        apiMode: provider.apiMode,
+        gatewayRoute: provider.gatewayRoute,
+      }
+    }
+  }
+  return null
+}
+
+/**
  * 获取用户自定义模型列表
  */
 export async function getUserModels(userId: string): Promise<CustomModel[]> {

@@ -5,6 +5,8 @@ export interface VoiceDesignInput {
   previewText: string
   preferredName?: string
   language?: 'zh' | 'en'
+  /** 可选的 DashScope 兼容 baseUrl（默认官方） */
+  baseUrl?: string
 }
 
 export interface VoiceDesignResult {
@@ -50,7 +52,10 @@ export async function createVoiceDesign(
   _ulogInfo('[VoiceDesign] 请求体:', JSON.stringify(requestBody, null, 2))
 
   try {
-    const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization', {
+    const endpointBase = input.baseUrl?.trim()
+      ? input.baseUrl.replace(/\/+$/, '')
+      : 'https://dashscope.aliyuncs.com/api/v1'
+    const response = await fetch(`${endpointBase}/services/audio/tts/customization`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

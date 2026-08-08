@@ -11,9 +11,8 @@ import { assertTaskActive } from '@/lib/workers/utils'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
 
 // 声音设计（自定义音色创建）依赖阿里百炼 DashScope 的 customization 接口。
-// 从用户已配置的 provider 中按优先级解析：优先 bailian，其次 token61 等
-// 兼容中转（baseUrl 取自 provider 配置）。
-const VOICE_DESIGN_PROVIDER_KEYS = ['bailian', 'token61']
+// 实测 token61 等 OpenAI 兼容中转不支持该接口（404），因此仅允许 bailian provider。
+const VOICE_DESIGN_PROVIDER_KEYS = ['bailian']
 
 function readRequiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) {

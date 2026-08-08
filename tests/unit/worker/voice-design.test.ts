@@ -96,7 +96,7 @@ describe('worker voice-design behavior', () => {
 
     const result = await handleVoiceDesignTask(job)
 
-    expect(apiConfigMock.findProviderConfig).toHaveBeenCalledWith('user-1', ['bailian', 'token61'])
+    expect(apiConfigMock.findProviderConfig).toHaveBeenCalledWith('user-1', ['bailian'])
     expect(bailianMock.createVoiceDesign).toHaveBeenCalledWith({
       voicePrompt: 'calm female narrator',
       previewText: 'hello world',

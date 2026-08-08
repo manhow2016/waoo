@@ -83,10 +83,15 @@ export async function createVoiceDesign(
     }
 
     if (!response.ok) {
+      const rawMessage = readErrorMessage(data) || `声音设计 API 调用失败 (${response.status})`
+      // token61 中转未正确配置声音设计渠道时给出清晰提示
+      const isRelayError = /invalid relay format|gen_relay_info_failed|voice_prompt is required/i.test(rawMessage)
       return {
         success: false,
-        error: readErrorMessage(data) || `声音设计 API 调用失败 (${response.status})`,
-        errorCode: readErrorCode(data),
+        error: isToken61 && isRelayError
+          ? `声音设计暂不可用：token61 中转未正确配置 qwen-voice-design 渠道（${rawMessage}）。请联系 token61 平台确认，或改在设置中心配置 bailian（阿里百炼）API Key。`
+          : rawMessage,
+        errorCode: readErrorCode(data) || (isRelayError ? 'RELAY_UNCONFIGURED' : undefined),
       }
     }
 

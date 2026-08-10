@@ -1061,6 +1061,17 @@ function CanvasEditor(props: {
               onToggleRenderMode={handleToggleRenderMode}
               onAiGenerate={(nodeId) => void handleAiGenerate(nodeId)}
               aiGenerating={aiGeneratingNodeId === node.id}
+              onContextMenu={(e) => {
+                setSelectedNodeId(node.id)
+                setContextMenu({
+                  type: 'node',
+                  x: e.clientX,
+                  y: e.clientY,
+                  nodeId: node.id,
+                  nodeType: node.type,
+                  hasImageContent: node.type === 'image' && Boolean(node.content),
+                })
+              }}
             />
           ))}
 
@@ -1367,6 +1378,33 @@ function CanvasEditor(props: {
             setConnections((prev) => [...prev, connection]);
             setSelectedNodeId(newNode.id);
           },
+          onCopyNode: (nodeId) => {
+            const node = nodes.find((n) => n.id === nodeId);
+            if (node) {
+              const data = JSON.stringify(node);
+              navigator.clipboard.writeText(data).catch(() => {});
+            }
+          },
+          onDuplicateNode: (nodeId) => {
+            commitHistory();
+            const node = nodes.find((n) => n.id === nodeId);
+            if (node) {
+              const newNode = { ...node, id: createNode(node.type, node.x + 40, node.y + 40).id, x: node.x + 40, y: node.y + 40 };
+              setNodes((prev) => [...prev, newNode]);
+              setSelectedNodeId(newNode.id);
+            }
+          },
+          onDeleteNode: (nodeId) => {
+            commitHistory();
+            const result = deleteNode(nodes, connections, nodeId);
+            setNodes(result.nodes);
+            setConnections(result.connections);
+            setSelectedNodeId(null);
+          },
+          onDeleteImageOnly: (nodeId) => {
+            commitHistory();
+            setNodes((prev) => prev.map((n) => n.id === nodeId ? { ...n, content: undefined } : n));
+          },
         }}
       />
     </div>
@@ -1404,6 +1442,7 @@ function CanvasNodeView(props: {
   onToggleRenderMode: (nodeId: string) => void;
   onAiGenerate: (nodeId: string) => void;
   aiGenerating: boolean;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   const t = useTranslations('imageStudio');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1458,6 +1497,11 @@ function CanvasNodeView(props: {
       }}
       onPointerDown={props.onPointerDown}
       onClick={props.onSelect}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        props.onContextMenu?.(e)
+      }}
     >
       {/* 头部：显示节点标题，双击可重命名 */}
       <div

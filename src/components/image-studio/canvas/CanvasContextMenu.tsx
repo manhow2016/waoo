@@ -15,12 +15,17 @@ export type ContextMenuState =
   | { type: 'canvas'; x: number; y: number; worldX: number; worldY: number }
   | { type: 'connection'; x: number; y: number; connectionId: string }
   | { type: 'connection-create'; x: number; y: number; worldX: number; worldY: number; sourceNodeId: string; handleType: 'source' | 'target' }
-  | { type: 'node'; x: number; y: number; nodeId: string }
+  | { type: 'node'; x: number; y: number; nodeId: string; nodeType: CanvasNodeType; hasImageContent?: boolean }
 
 export interface ContextMenuActions {
   onAddNodeAt?: (type: CanvasNodeType, worldX: number, worldY: number) => void
   onDeleteConnection?: (connectionId: string) => void
   onConnectionCreate?: (type: CanvasNodeType, worldX: number, worldY: number, sourceNodeId: string, handleType: 'source' | 'target') => void
+  // 节点相关操作
+  onDuplicateNode?: (nodeId: string) => void
+  onDeleteNode?: (nodeId: string) => void
+  onCopyNode?: (nodeId: string) => void
+  onDeleteImageOnly?: (nodeId: string) => void
 }
 
 export function CanvasContextMenu(props: {
@@ -34,10 +39,10 @@ export function CanvasContextMenu(props: {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') props.onClose()
     }
-    window.addEventListener('pointerdown', handleClose)
+    window.addEventListener('mousedown', handleClose)
     window.addEventListener('keydown', handleKey)
     return () => {
-      window.removeEventListener('pointerdown', handleClose)
+      window.removeEventListener('mousedown', handleClose)
       window.removeEventListener('keydown', handleKey)
     }
   }, [props.state, props.onClose])
@@ -61,6 +66,15 @@ export function CanvasContextMenu(props: {
   } else if (props.state.type === 'connection') {
     const { connectionId } = props.state
     items.push({ label: '删除连线', icon: 'trash', onClick: () => props.actions.onDeleteConnection?.(connectionId), danger: true })
+  } else if (props.state.type === 'node') {
+    const { nodeId, nodeType, hasImageContent } = props.state
+    // 图片节点且有图片内容时，显示删除图片选项
+    if (nodeType === 'image' && hasImageContent) {
+      items.push({ label: '删除图片', icon: 'close', onClick: () => props.actions.onDeleteImageOnly?.(nodeId) })
+    }
+    items.push({ label: '复制', icon: 'copy', onClick: () => props.actions.onCopyNode?.(nodeId) })
+    items.push({ label: '复制节点', icon: 'copy', onClick: () => props.actions.onDuplicateNode?.(nodeId) })
+    items.push({ label: '删除', icon: 'trash', onClick: () => props.actions.onDeleteNode?.(nodeId), danger: true })
   }
 
   return createPortal(
@@ -69,6 +83,7 @@ export function CanvasContextMenu(props: {
       className="fixed z-[130] min-w-40 overflow-hidden rounded-xl border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-surface-strong)] p-1 text-[var(--glass-text-primary)] shadow-xl"
       style={{ left: props.state.x, top: props.state.y }}
       onPointerDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
       onContextMenu={(event) => event.preventDefault()}
     >
       {items.map((item) => (

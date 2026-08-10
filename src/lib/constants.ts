@@ -123,7 +123,8 @@ export const VIDEO_RESOLUTIONS = [
 export const VIDEO_DURATIONS = [
   { value: '3', label: '3秒' },
   { value: '5', label: '5秒' },
-  { value: '10', label: '10秒' }
+  { value: '10', label: '10秒' },
+  { value: '15', label: '15秒' }
 ]
 
 export const TTS_RATES = [

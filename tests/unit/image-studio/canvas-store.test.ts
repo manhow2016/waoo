@@ -43,7 +43,7 @@ function makeConfig(id: string): CanvasNode {
     width: 260,
     height: 260,
     composerContent: '',
-    genConfig: { model: 'google::gemini-3-pro-image-preview', outputSize: '1K', aspectRatio: '1:1', temperature: 1, count: 1 },
+    genConfig: { model: 'google::gemini-3-pro-image-preview', outputSize: '1K', aspectRatio: '1:1', count: 1 },
   }
 }
 
@@ -64,7 +64,6 @@ describe('canvas-store node helpers', () => {
       model: '',
       outputSize: '1K',
       aspectRatio: '1:1',
-      temperature: 1,
       count: 1,
     })
   })

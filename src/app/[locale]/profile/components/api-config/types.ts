@@ -97,6 +97,18 @@ export const PRESET_MODELS: PresetModel[] = [
     type: 'llm',
     provider: 'token61',
   },
+  {
+    modelId: 'qwen3.6-flash',
+    name: 'qwen3.6-flash',
+    type: 'llm',
+    provider: 'token61',
+  },
+  {
+    modelId: 'qwen3.6-plus',
+    name: 'qwen3.6-plus',
+    type: 'llm',
+    provider: 'token61',
+  },
   //{ modelId: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro', type: 'llm', provider: 'token61' },
   //{ modelId: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash', type: 'llm', provider: 'token61' },
   // { modelId: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', type: 'llm', provider: 'token61' },
@@ -111,7 +123,12 @@ export const PRESET_MODELS: PresetModel[] = [
     type: 'image',
     provider: 'token61',
   },
-
+  {
+    modelId: 'qwen-image-2.0-pro',
+    name: 'qwen-image-2.0-pro',
+    type: 'image',
+    provider: 'token61',
+  },
   // 视频模型
   {
     modelId: 'wan2.7-t2v',

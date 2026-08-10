@@ -28,9 +28,7 @@ import {
 } from './image-utils'
 import {
   GlassSelect,
-  GlassSlider,
   Segmented,
-  GlassSwitch,
   StudioModal,
   StudioSpinner,
   StudioEmptyState,
@@ -82,11 +80,8 @@ export default function ImageGenerationWorkbench() {
   const [selectedModel, setSelectedModel] = useState('')
   const [outputSize, setOutputSize] = useState('1K')
   const [aspectRatio, setAspectRatio] = useState('1:1')
-  const [temperature, setTemperature] = useState(1)
   const [parallelCount, setParallelCount] = useState(1)
   const [quality, setQuality] = useState<'auto' | 'low' | 'medium' | 'high'>('auto')
-  const [customSize, setCustomSize] = useState('')
-  const [useCustomSize, setUseCustomSize] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -114,7 +109,7 @@ export default function ImageGenerationWorkbench() {
   )
 
   const sizeOptions = useMemo(() => {
-    return getStudioOutputSizeOptions(activeModel).map((size) => ({ value: size, label: size === '512' ? '0.5K' : size }))
+    return getStudioOutputSizeOptions(activeModel).map((size) => ({ value: size, label: size }))
   }, [activeModel])
 
   useEffect(() => {
@@ -162,10 +157,8 @@ export default function ImageGenerationWorkbench() {
     }
 
     const options: StudioGenerateOptions = {
-      outputSize: useCustomSize ? undefined : (outputSize as StudioGenerateOptions['outputSize']),
-      aspectRatio: useCustomSize ? undefined : aspectRatio,
-      customSize: useCustomSize && customSize.trim() ? customSize.trim() : undefined,
-      temperature,
+      outputSize: outputSize as StudioGenerateOptions['outputSize'],
+      aspectRatio,
       quality,
     }
 
@@ -382,7 +375,6 @@ export default function ImageGenerationWorkbench() {
                 value={outputSize}
                 options={sizeOptions}
                 onChange={setOutputSize}
-                disabled={useCustomSize}
               />
             </div>
             <div>
@@ -391,43 +383,11 @@ export default function ImageGenerationWorkbench() {
                 value={aspectRatio}
                 options={STUDIO_ASPECT_RATIOS.map((option) => ({ value: option.value, label: option.label }))}
                 onChange={setAspectRatio}
-                disabled={useCustomSize}
-              />
-            </div>
-            <div className="flex items-end">
-              <GlassSwitch
-                checked={useCustomSize}
-                onChange={setUseCustomSize}
-                label={tc('customSize')}
-                disabled={!activeModel?.supportsCustomSize}
               />
             </div>
           </div>
 
-          {useCustomSize && (
-            <div>
-              <input
-                type="text"
-                value={customSize}
-                onChange={(e) => setCustomSize(e.target.value)}
-                placeholder={tc('customSizePlaceholder')}
-                className="glass-input-base w-full px-3 py-2 text-sm"
-              />
-              <p className="glass-field-hint mt-1">{tc('customSizeHint')}</p>
-            </div>
-          )}
-
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <GlassSlider
-                label={tc('temperature')}
-                value={temperature}
-                min={0}
-                max={2}
-                step={0.1}
-                onChange={setTemperature}
-              />
-            </div>
             <div>
               <label className="glass-field-label block mb-1.5">{tc('parallelCount')}</label>
               <Segmented

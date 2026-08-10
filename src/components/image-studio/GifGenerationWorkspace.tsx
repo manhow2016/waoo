@@ -63,7 +63,7 @@ export default function GifGenerationWorkspace() {
     if (fallback) {
       setSelectedModel(fallback.value)
       const options = fallback.resolutionOptions || ['1K']
-      setOutputSize(options.includes('2K') ? '2K' : options[0] || '1K')
+      setOutputSize(options.includes('2K') ? '2K' : '1K')
     }
   }, [imageModels, selectedModel])
 
@@ -72,9 +72,11 @@ export default function GifGenerationWorkspace() {
     [imageModels, selectedModel],
   )
 
+  // GIF 输出尺寸固定为 1K/2K 两档，与模型能力求交集，无能力时回退两档
   const sizeOptions = useMemo(() => {
-    const sizes = activeModel?.resolutionOptions || ['1K', '2K']
-    return sizes.map((size) => ({ value: size, label: size === '512' ? '0.5K' : size }))
+    const supported = (activeModel?.resolutionOptions || []).filter((size) => size === '1K' || size === '2K')
+    const sizes = supported.length > 0 ? supported : ['1K', '2K']
+    return sizes.map((size) => ({ value: size, label: size }))
   }, [activeModel])
 
   const handleFiles = useCallback(async (files: File[]) => {

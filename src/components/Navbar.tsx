@@ -1,39 +1,20 @@
 'use client';
 
-import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from './LanguageSwitcher';
 import { AppIcon } from '@/components/ui/icons';
 import { Link } from '@/i18n/navigation';
-import { buildAuthenticatedHomeTarget } from '@/lib/home/default-route';
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const t = useTranslations('nav');
-  const tc = useTranslations('common');
 
   return (
     <nav className='glass-nav sticky top-0 z-50'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='flex justify-between items-center h-16'>
-          <div className='flex items-center gap-2'>
-            <Link
-              href={
-                session ? buildAuthenticatedHomeTarget() : { pathname: '/' }
-              }
-              className='group'
-            >
-              <Image
-                src='/logo-small.png'
-                alt={tc('appName')}
-                width={80}
-                height={80}
-                className='object-contain transition-transform group-hover:scale-110'
-              />
-            </Link>
-          </div>
-          <div className='flex items-center space-x-6'>
+          <div className='flex items-center space-x-6 ml-auto'>
             {status === 'loading' ? (
               <div className='flex items-center space-x-4'>
                 <div className='h-4 w-16 rounded-full bg-[var(--glass-bg-muted)] animate-pulse' />

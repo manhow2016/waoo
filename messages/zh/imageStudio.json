@@ -14,8 +14,7 @@
     "model": "模型",
     "outputSize": "输出尺寸",
     "aspectRatio": "宽高比",
-    "temperature": "温度",
-    "parallelCount": "并行数量",
+    "parallelCount": "生成数量",
     "referenceImages": "参考图",
     "uploadImage": "上传图片",
     "uploadHint": "拖拽、点击或粘贴图片",
@@ -45,10 +44,7 @@
     "optimize": "优化提示词",
     "optimizing": "优化中…",
     "useOptimized": "使用优化结果",
-    "advancedParams": "高级参数",
-    "customSize": "自定义尺寸",
-    "customSizePlaceholder": "如 1024x1024",
-    "customSizeHint": "仅部分模型支持"
+    "advancedParams": "高级参数"
   },
   "workbench": {
     "tabName": "生图工作台",
@@ -114,7 +110,6 @@
       "model": "生成模型",
       "outputSize": "输出尺寸",
       "aspectRatio": "宽高比",
-      "temperature": "温度",
       "count": "生成数量",
       "run": "执行生成",
       "running": "生成中…",

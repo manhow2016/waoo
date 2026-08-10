@@ -40,7 +40,6 @@ export interface CanvasNode {
     model: string
     outputSize: string
     aspectRatio: string
-    temperature: number
     count: number
   }
   /** 配置节点：合成提示词 */
@@ -126,7 +125,6 @@ export function createNode(type: CanvasNodeType, x: number, y: number): CanvasNo
         model: '',
         outputSize: '1K',
         aspectRatio: '1:1',
-        temperature: 1,
         count: 1,
       },
     }

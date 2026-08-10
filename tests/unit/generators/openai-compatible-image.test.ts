@@ -106,6 +106,46 @@ describe('OpenAICompatibleImageGenerator', () => {
     expect(Array.isArray((call[0] as { image?: unknown }).image)).toBe(true)
   })
 
+  it('allows custom pixel size (WxH) beyond the standard whitelist', async () => {
+    openAIState.generate.mockResolvedValueOnce({
+      data: [{ b64_json: 'Y3VzdG9t' }],
+    })
+
+    const generator = new OpenAICompatibleImageGenerator('gpt-image-1', 'openai-compatible:oa-1')
+    const result = await generator.generate({
+      userId: 'user-1',
+      prompt: 'draw a lighthouse',
+      options: {
+        size: '1920x1080',
+        quality: 'high',
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.imageBase64).toBe('Y3VzdG9t')
+    expect(openAIState.generate).toHaveBeenCalledWith({
+      model: 'gpt-image-1',
+      prompt: 'draw a lighthouse',
+      response_format: 'b64_json',
+      quality: 'high',
+      size: '1920x1080',
+    })
+  })
+
+  it('rejects malformed custom sizes', async () => {
+    const generator = new OpenAICompatibleImageGenerator('gpt-image-1', 'openai-compatible:oa-1')
+    const result = await generator.generate({
+      userId: 'user-1',
+      prompt: 'draw',
+      options: {
+        size: '1920x',
+      },
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('OPENAI_COMPAT_IMAGE_OPTION_UNSUPPORTED')
+  })
+
   it('fails explicitly on unsupported option values', async () => {
     const generator = new OpenAICompatibleImageGenerator('gpt-image-1', 'openai-compatible:oa-1')
     const result = await generator.generate({

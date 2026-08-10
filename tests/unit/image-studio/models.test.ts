@@ -9,7 +9,6 @@ import {
 function makeModel(partial: Partial<StudioImageModelOption> & { value: string; label: string }): StudioImageModelOption {
   return {
     resolutionOptions: ['1K', '2K', '4K'],
-    supportsCustomSize: false,
     ...partial,
   }
 }
@@ -20,9 +19,14 @@ describe('image-studio model adapter helpers', () => {
     expect(getStudioOutputSizeOptions(model)).toEqual(['1K', '2K', '4K'])
   })
 
-  it('falls back to 1K when no options available', () => {
-    expect(getStudioOutputSizeOptions(undefined)).toEqual(['1K'])
-    expect(getStudioOutputSizeOptions(makeModel({ value: 'm', label: 'M', resolutionOptions: [] }))).toEqual(['1K'])
+  it('filters out non-1K/2K/4K tiers from capability options', () => {
+    const model = makeModel({ value: 'google::gemini-3.1-flash-image-preview', label: 'Flash', resolutionOptions: ['0.5K', '1K', '2K', '4K'] })
+    expect(getStudioOutputSizeOptions(model)).toEqual(['1K', '2K', '4K'])
+  })
+
+  it('falls back to the fixed 1K/2K/4K set when no options available', () => {
+    expect(getStudioOutputSizeOptions(undefined)).toEqual(['1K', '2K', '4K'])
+    expect(getStudioOutputSizeOptions(makeModel({ value: 'm', label: 'M', resolutionOptions: [] }))).toEqual(['1K', '2K', '4K'])
   })
 
   it('exposes a set of aspect ratio options', () => {

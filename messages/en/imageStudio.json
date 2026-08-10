@@ -14,8 +14,7 @@
     "model": "Model",
     "outputSize": "Output Size",
     "aspectRatio": "Aspect Ratio",
-    "temperature": "Temperature",
-    "parallelCount": "Parallel Count",
+    "parallelCount": "Generate Count",
     "referenceImages": "Reference Images",
     "uploadImage": "Upload Image",
     "uploadHint": "Drag, click or paste an image",
@@ -45,10 +44,7 @@
     "optimize": "Optimize Prompt",
     "optimizing": "Optimizing…",
     "useOptimized": "Use Optimized",
-    "advancedParams": "Advanced Params",
-    "customSize": "Custom Size",
-    "customSizePlaceholder": "e.g. 1024x1024",
-    "customSizeHint": "Only supported by some models"
+    "advancedParams": "Advanced Params"
   },
   "workbench": {
     "tabName": "Workbench",
@@ -114,7 +110,6 @@
       "model": "Model",
       "outputSize": "Output Size",
       "aspectRatio": "Aspect Ratio",
-      "temperature": "Temperature",
       "count": "Count",
       "run": "Generate",
       "running": "Generating…",

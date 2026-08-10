@@ -6,7 +6,7 @@
  */
 
 /** 图像模型输出尺寸档位（对应能力目录中的 resolutionOptions） */
-export type StudioOutputSize = '512' | '1K' | '2K' | '4K'
+export type StudioOutputSize = '1K' | '2K' | '4K'
 
 /** 宽高比，如 1:1 / 16:9 */
 export type StudioAspectRatio = string
@@ -25,10 +25,6 @@ export interface StudioGenerateOptions {
   outputSize?: StudioOutputSize
   /** 宽高比，如 1:1 / 16:9 */
   aspectRatio?: StudioAspectRatio
-  /** OpenAI 兼容自定义像素尺寸，优先于 aspectRatio */
-  customSize?: string
-  /** 生成温度（不支持温度的原生模型忽略） */
-  temperature?: number
   /** GPT Image 高级参数：质量 */
   quality?: 'auto' | 'low' | 'medium' | 'high'
   /** GPT Image 高级参数：风格 */

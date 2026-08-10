@@ -10,15 +10,7 @@ import {
 type OpenAIImageResponseFormat = 'url' | 'b64_json'
 type OpenAIImageOutputFormat = 'png' | 'jpeg' | 'webp'
 type OpenAIImageGenerateQuality = 'standard' | 'hd' | 'low' | 'medium' | 'high' | 'auto'
-type OpenAIImageGenerateSize =
-  | 'auto'
-  | '1024x1024'
-  | '1536x1024'
-  | '1024x1536'
-  | '256x256'
-  | '512x512'
-  | '1792x1024'
-  | '1024x1792'
+type OpenAIImageGenerateSize = 'auto' | `${number}x${number}`
 
 const OPENAI_IMAGE_OPTION_KEYS = new Set([
   'provider',
@@ -72,17 +64,23 @@ function normalizeGenerateQuality(value: unknown): OpenAIImageGenerateQuality | 
 
 function normalizeOpenAIImageSize(value: string | undefined): OpenAIImageGenerateSize | undefined {
   if (!value) return undefined
+  const trimmed = value.trim()
+  // 标准尺寸直接放行
   if (
-    value === 'auto'
-    || value === '1024x1024'
-    || value === '1536x1024'
-    || value === '1024x1536'
-    || value === '256x256'
-    || value === '512x512'
-    || value === '1792x1024'
-    || value === '1024x1792'
+    trimmed === 'auto'
+    || trimmed === '1024x1024'
+    || trimmed === '1536x1024'
+    || trimmed === '1024x1536'
+    || trimmed === '256x256'
+    || trimmed === '512x512'
+    || trimmed === '1792x1024'
+    || trimmed === '1024x1792'
   ) {
-    return value
+    return trimmed
+  }
+  // 自定义尺寸：允许任意像素尺寸（WxH），OpenAI 兼容网关通常支持
+  if (/^\d+x\d+$/.test(trimmed)) {
+    return trimmed as OpenAIImageGenerateSize
   }
   throw new Error(`OPENAI_COMPAT_IMAGE_OPTION_UNSUPPORTED: size=${value}`)
 }

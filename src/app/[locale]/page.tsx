@@ -35,17 +35,7 @@ export default function Home() {
 
   if (status !== 'unauthenticated') {
     return (
-      <div className='glass-page min-h-screen flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <Image
-            src='/logo-small.png'
-            alt='waoowaoo'
-            width={80}
-            height={80}
-            className='animate-pulse'
-          />
-        </div>
-      </div>
+      <div className='glass-page min-h-screen flex items-center justify-center' />
     );
   }
 
@@ -59,16 +49,7 @@ export default function Home() {
             : 'bg-transparent py-5 px-8 md:px-16'
         }`}
       >
-        <Link href={{ pathname: '/' }} className='group'>
-          <Image
-            src='/logo-small.png'
-            alt='waoowaoo'
-            width={80}
-            height={80}
-            className='object-contain transition-transform group-hover:scale-110'
-          />
-        </Link>
-        <div className='flex items-center gap-6'>
+        <div className='flex items-center gap-6 ml-auto'>
           <LanguageSwitcher />
           <Link
             href={{ pathname: '/auth/signin' }}

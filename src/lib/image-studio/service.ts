@@ -47,7 +47,6 @@ async function resolveImageSource(
     referenceImages: normalizedRefs,
     aspectRatio: options.aspectRatio,
     resolution: options.outputSize,
-    size: options.customSize,
     outputFormat: options.outputFormat,
   })
 

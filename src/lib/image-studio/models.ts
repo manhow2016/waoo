@@ -17,8 +17,6 @@ export interface StudioImageModelOption {
   providerName?: string
   /** 能力目录中的分辨率档位，如 ['1K','2K','4K'] */
   resolutionOptions?: string[]
-  /** 是否具备自定义尺寸能力（OpenAI 兼容模型） */
-  supportsCustomSize?: boolean
 }
 
 /** LLM 模型展示选项 */
@@ -37,12 +35,7 @@ function normalizeResolutionOptions(option: UserModelOption): string[] {
   return []
 }
 
-function inferSupportsCustomSize(option: UserModelOption): boolean {
-  return option.provider === 'openai-compatible'
-}
-
-export function useStudioModels() {
-  const query = useUserModels()
+export function useStudioModels() {  const query = useUserModels()
 
   const imageModels: StudioImageModelOption[] = (query.data?.image || []).map((option) => {
     const resolutionOptions = normalizeResolutionOptions(option)
@@ -52,7 +45,6 @@ export function useStudioModels() {
       provider: option.provider,
       providerName: option.providerName,
       resolutionOptions,
-      supportsCustomSize: inferSupportsCustomSize(option),
     }
   })
 
@@ -70,12 +62,14 @@ export function useStudioModels() {
   }
 }
 
-/** 从图像模型能力推导输出尺寸选项（与 nova 语义保持一致） */
+/** 图像模型可选输出尺寸档位（固定三档，过滤 0.5K/512 等档位） */
+const STUDIO_OUTPUT_SIZES: string[] = ['1K', '2K', '4K']
+
+/** 从图像模型能力推导输出尺寸选项（固定 1K/2K/4K 三档） */
 export function getStudioOutputSizeOptions(model?: StudioImageModelOption): string[] {
-  if (!model) return ['1K']
-  const options = model.resolutionOptions || []
-  if (options.length === 0) return ['1K']
-  return options
+  if (!model) return [...STUDIO_OUTPUT_SIZES]
+  const options = (model.resolutionOptions || []).filter((size) => STUDIO_OUTPUT_SIZES.includes(size))
+  return options.length > 0 ? options : [...STUDIO_OUTPUT_SIZES]
 }
 
 /** 支持的宽高比选项（与能力目录解耦的通用集合） */

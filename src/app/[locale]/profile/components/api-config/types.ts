@@ -105,272 +105,37 @@ export const PRESET_MODELS: PresetModel[] = [
   // { modelId: 'google/gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', type: 'llm', provider: 'token61' },
 
   // 图像模型
-  { modelId: 'banana', name: 'Banana Pro', type: 'image', provider: 'token61' },
-  { modelId: 'banana-2', name: 'Banana 2', type: 'image', provider: 'token61' },
   {
-    modelId: 'doubao-seedream-4-5-251128',
-    name: 'Seedream 4.5',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'doubao-seedream-4-0-250828',
-    name: 'Seedream 4.0',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'doubao-seedream-5-0-260128',
-    name: 'Seedream 5.0 Lite',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'gemini-3-pro-image-preview',
-    name: 'Gemini 3 Pro Image',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'gemini-3.1-flash-image-preview',
-    name: 'Gemini 3.1 Flash Image',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'gemini-2.5-flash-image',
-    name: 'Gemini 2.5 Flash Image',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'imagen-4.0-generate-001',
-    name: 'Imagen 4',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'imagen-4.0-ultra-generate-001',
-    name: 'Imagen 4 Ultra',
-    type: 'image',
-    provider: 'token61',
-  },
-  {
-    modelId: 'imagen-4.0-fast-generate-001',
-    name: 'Imagen 4 Fast',
+    modelId: 'qwen-image-2.0',
+    name: 'qwen-image-2.0',
     type: 'image',
     provider: 'token61',
   },
 
   // 视频模型
   {
-    modelId: 'doubao-seedance-1-0-pro-fast-251015',
-    name: 'Seedance 1.0 Pro Fast',
+    modelId: 'wan2.7-t2v',
+    name: 'wan2.7-t2v',
     type: 'video',
     provider: 'token61',
   },
-  {
-    modelId: 'doubao-seedance-1-0-lite-i2v-250428',
-    name: 'Seedance 1.0 Lite',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'doubao-seedance-1-5-pro-251215',
-    name: 'Seedance 1.5 Pro',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'doubao-seedance-2-0-260128',
-    name: 'Seedance 2.0',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'doubao-seedance-2-0-fast-260128',
-    name: 'Seedance 2.0 Fast',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'doubao-seedance-1-0-pro-250528',
-    name: 'Seedance 1.0 Pro',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'veo-3.1-generate-preview',
-    name: 'Veo 3.1',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'veo-3.1-fast-generate-preview',
-    name: 'Veo 3.1 Fast',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'veo-3.0-generate-001',
-    name: 'Veo 3.0',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'veo-3.0-fast-generate-001',
-    name: 'Veo 3.0 Fast',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'veo-2.0-generate-001',
-    name: 'Veo 2.0',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wan2.7-i2v',
-    name: 'Wan2.7 I2V',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wan2.6-i2v-flash',
-    name: 'Wan2.6 I2V Flash',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wan2.6-i2v',
-    name: 'Wan2.6 I2V',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wan2.5-i2v-preview',
-    name: 'Wan2.5 I2V Preview',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wan2.2-i2v-plus',
-    name: 'Wan2.2 I2V Plus',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wan2.2-kf2v-flash',
-    name: 'Wan2.2 KF2V Flash',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'wanx2.1-kf2v-plus',
-    name: 'WanX2.1 KF2V Plus',
-    type: 'video',
-    provider: 'token61',
-  },
-  { modelId: 'fal-wan25', name: 'Wan 2.6', type: 'video', provider: 'token61' },
-  { modelId: 'fal-veo31', name: 'Veo 3.1', type: 'video', provider: 'token61' },
-  { modelId: 'fal-sora2', name: 'Sora 2', type: 'video', provider: 'token61' },
-  {
-    modelId: 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video',
-    name: 'Kling 2.5 Turbo Pro',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'fal-ai/kling-video/v3/standard/image-to-video',
-    name: 'Kling 3 Standard',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'fal-ai/kling-video/v3/pro/image-to-video',
-    name: 'Kling 3 Pro',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'minimax-hailuo-2.3',
-    name: 'Hailuo 2.3',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'minimax-hailuo-2.3-fast',
-    name: 'Hailuo 2.3 Fast',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'minimax-hailuo-02',
-    name: 'Hailuo 02',
-    type: 'video',
-    provider: 'token61',
-  },
-  { modelId: 't2v-01', name: 'T2V-01', type: 'video', provider: 'token61' },
-  {
-    modelId: 't2v-01-director',
-    name: 'T2V-01 Director',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'viduq3-pro',
-    name: 'Vidu Q3 Pro',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'viduq2-pro-fast',
-    name: 'Vidu Q2 Pro Fast',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'viduq2-pro',
-    name: 'Vidu Q2 Pro',
-    type: 'video',
-    provider: 'token61',
-  },
-  {
-    modelId: 'viduq2-turbo',
-    name: 'Vidu Q2 Turbo',
-    type: 'video',
-    provider: 'token61',
-  },
-  { modelId: 'viduq1', name: 'Vidu Q1', type: 'video', provider: 'token61' },
-  {
-    modelId: 'viduq1-classic',
-    name: 'Vidu Q1 Classic',
-    type: 'video',
-    provider: 'token61',
-  },
-  { modelId: 'vidu2.0', name: 'Vidu 2.0', type: 'video', provider: 'token61' },
 
   // 音频模型
-  {
-    modelId: 'fal-ai/index-tts-2/text-to-speech',
-    name: 'IndexTTS 2',
-    type: 'audio',
-    provider: 'token61',
-  },
+
   {
     modelId: 'qwen3-tts-vd-2026-01-26',
-    name: 'Qwen3 TTS',
+    name: 'qwen3-tts-vd-2026-01-26',
     type: 'audio',
     provider: 'token61',
   },
   {
     modelId: 'qwen-voice-design',
-    name: 'Qwen Voice Design',
+    name: 'qwen-voice-design',
     type: 'audio',
     provider: 'token61',
   },
-
   // 口型同步模型
+  /*
   {
     modelId: 'fal-ai/kling-video/lipsync/audio-to-video',
     name: 'Kling Lip Sync',
@@ -388,7 +153,7 @@ export const PRESET_MODELS: PresetModel[] = [
     name: 'VideoRetalk Lip Sync',
     type: 'lipsync',
     provider: 'token61',
-  },
+  },*/
 ];
 
 const PRESET_COMING_SOON_MODEL_KEYS = new Set<string>([]);

@@ -35,14 +35,21 @@ export function CanvasContextMenu(props: {
 }) {
   useEffect(() => {
     if (!props.state) return
-    const handleClose = () => props.onClose()
+    const handlePointerDown = (event: PointerEvent) => {
+      // 点击菜单内部时不关闭（菜单项 onClick 会主动关闭）
+      const target = event.target as HTMLElement | null
+      if (target?.closest('[data-canvas-context-menu]')) return
+      props.onClose()
+    }
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') props.onClose()
     }
-    window.addEventListener('mousedown', handleClose)
+    // 使用捕获阶段监听 pointerdown：画布节点的 pointerdown 会调用 preventDefault，
+    // 导致浏览器不再派发兼容的 mousedown 事件，因此不能依赖 mousedown 关闭菜单
+    window.addEventListener('pointerdown', handlePointerDown, true)
     window.addEventListener('keydown', handleKey)
     return () => {
-      window.removeEventListener('mousedown', handleClose)
+      window.removeEventListener('pointerdown', handlePointerDown, true)
       window.removeEventListener('keydown', handleKey)
     }
   }, [props.state, props.onClose])
@@ -80,6 +87,7 @@ export function CanvasContextMenu(props: {
   return createPortal(
     <div
       data-canvas-no-zoom
+      data-canvas-context-menu
       className="fixed z-[130] min-w-40 overflow-hidden rounded-xl border border-[var(--glass-stroke-soft)] bg-[var(--glass-bg-surface-strong)] p-1 text-[var(--glass-text-primary)] shadow-xl"
       style={{ left: props.state.x, top: props.state.y }}
       onPointerDown={(event) => event.stopPropagation()}

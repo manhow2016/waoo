@@ -65,8 +65,29 @@ export function useStudioModels() {  const query = useUserModels()
 /** 图像模型可选输出尺寸档位（固定三档，过滤 0.5K/512 等档位） */
 const STUDIO_OUTPUT_SIZES: string[] = ['1K', '2K', '4K']
 
+/**
+ * 按模型名（modelId）固定的分辨率档位映射，优先于能力目录推导。
+ * 未在映射中的模型回退到能力目录或默认三档。
+ */
+const MODEL_RESOLUTION_OVERRIDES: Record<string, string[]> = {
+  'qwen-image-2.0-pro': ['1K', '2K', '4K'],
+  'qwen-image-2.0': ['1K', '2K'],
+  'wan2.7-image': ['1K', '2K'],
+  'wan2.7-image-pro': ['1K', '2K', '4K'],
+}
+
+/** 从复合键 provider::modelId 中提取模型名（无分隔符时原样返回） */
+function extractModelId(value?: string): string {
+  if (!value) return ''
+  const sep = value.indexOf('::')
+  return sep >= 0 ? value.slice(sep + 2) : value
+}
+
 /** 从图像模型能力推导输出尺寸选项（固定 1K/2K/4K 三档） */
 export function getStudioOutputSizeOptions(model?: StudioImageModelOption): string[] {
+  const modelId = extractModelId(model?.value)
+  const overridden = modelId ? MODEL_RESOLUTION_OVERRIDES[modelId] : undefined
+  if (overridden) return [...overridden]
   if (!model) return [...STUDIO_OUTPUT_SIZES]
   const options = (model.resolutionOptions || []).filter((size) => STUDIO_OUTPUT_SIZES.includes(size))
   return options.length > 0 ? options : [...STUDIO_OUTPUT_SIZES]

@@ -29,6 +29,22 @@ describe('image-studio model adapter helpers', () => {
     expect(getStudioOutputSizeOptions(makeModel({ value: 'm', label: 'M', resolutionOptions: [] }))).toEqual(['1K', '2K', '4K'])
   })
 
+  it('uses per-model resolution overrides by model name', () => {
+    expect(getStudioOutputSizeOptions(makeModel({ value: 'bailian::qwen-image-2.0-pro', label: 'Pro' }))).toEqual(['1K', '2K', '4K'])
+    expect(getStudioOutputSizeOptions(makeModel({ value: 'bailian::qwen-image-2.0', label: 'Base' }))).toEqual(['1K', '2K'])
+    expect(getStudioOutputSizeOptions(makeModel({ value: 'bailian::wan2.7-image', label: 'Wan' }))).toEqual(['1K', '2K'])
+    expect(getStudioOutputSizeOptions(makeModel({ value: 'bailian::wan2.7-image-pro', label: 'Wan Pro' }))).toEqual(['1K', '2K', '4K'])
+  })
+
+  it('model overrides take priority over capability resolution options', () => {
+    const model = makeModel({ value: 'bailian::wan2.7-image', label: 'Wan', resolutionOptions: ['4K'] })
+    expect(getStudioOutputSizeOptions(model)).toEqual(['1K', '2K'])
+  })
+
+  it('matches model name when value has no provider prefix', () => {
+    expect(getStudioOutputSizeOptions(makeModel({ value: 'qwen-image-2.0-pro', label: 'Pro' }))).toEqual(['1K', '2K', '4K'])
+  })
+
   it('exposes a set of aspect ratio options', () => {
     expect(STUDIO_ASPECT_RATIOS.map((option) => option.value)).toContain('1:1')
     expect(STUDIO_ASPECT_RATIOS.map((option) => option.value)).toContain('16:9')

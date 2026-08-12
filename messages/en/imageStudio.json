@@ -13,6 +13,7 @@
     "promptPlaceholder": "Describe what you want to generate…",
     "model": "Model",
     "outputSize": "Output Size",
+    "outputResolution": "Resolution",
     "aspectRatio": "Aspect Ratio",
     "parallelCount": "Generate Count",
     "referenceImages": "Reference Images",

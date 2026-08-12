@@ -129,6 +129,18 @@ export const PRESET_MODELS: PresetModel[] = [
     type: 'image',
     provider: 'token61',
   },
+  {
+    modelId: 'wan2.7-image',
+    name: 'wan2.7-image',
+    type: 'image',
+    provider: 'token61',
+  },
+  {
+    modelId: 'wan2.7-image-pro',
+    name: 'wan2.7-image-pro',
+    type: 'image',
+    provider: 'token61',
+  },
   // 视频模型
   {
     modelId: 'wan2.7-t2v',

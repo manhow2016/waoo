@@ -13,6 +13,7 @@
     "promptPlaceholder": "描述你想生成的画面…",
     "model": "模型",
     "outputSize": "输出尺寸",
+    "outputResolution": "分辨率",
     "aspectRatio": "宽高比",
     "parallelCount": "生成数量",
     "referenceImages": "参考图",

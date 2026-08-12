@@ -269,7 +269,7 @@ export default function GifGenerationWorkspace() {
               />
             </div>
             <div>
-              <label className="glass-field-label block mb-1.5">{tc('outputSize')}</label>
+              <label className="glass-field-label block mb-1.5">{tc('outputResolution')}</label>
               <GlassSelect
                 value={outputSize}
                 options={sizeOptions}

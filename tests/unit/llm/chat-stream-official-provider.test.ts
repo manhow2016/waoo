@@ -113,6 +113,9 @@ describe('llm chatCompletionStream official provider branch', () => {
       apiKey: 'bl-key',
       baseUrl: undefined,
       temperature: 0.7,
+      // 百炼分支现已透传思考参数（修复 GENERATION_TIMEOUT 的一部分）
+      reasoning: true,
+      reasoningEffort: 'high',
     })
     expect(runOpenAICompatChatCompletionMock).not.toHaveBeenCalled()
     expect(completeSiliconFlowLlmMock).not.toHaveBeenCalled()

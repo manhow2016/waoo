@@ -183,6 +183,8 @@ export async function chatCompletionWithVision(
           baseUrl: providerConfig.baseUrl,
           messages: [{ role: 'user', content: prompt }],
           temperature,
+          // vision.ts 作用域内无 reasoningEffort，仅透传开关
+          reasoning,
         })
         recordCompletionUsage(resolvedModelId, completion)
         llmLogger.info({

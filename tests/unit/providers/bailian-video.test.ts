@@ -115,7 +115,8 @@ describe('bailian video provider', () => {
     expect(firstCall[1].body).toBe(JSON.stringify({
       model: 'wan2.7-i2v',
       input: {
-        img_url: 'https://example.com/frame.png',
+        // wan2.7 系实测必须用 media 数组（img_url 会 Field required: input.media）
+        media: [{ type: 'first_frame', url: 'https://example.com/frame.png' }],
         prompt: '让人物转身看向镜头',
       },
     }))
@@ -211,12 +212,15 @@ describe('bailian video provider', () => {
     if (!firstCall) {
       throw new Error('missing fetch call')
     }
-    expect(firstCall[0]).toBe('https://dashscope.aliyuncs.com/api/v1/services/aigc/image2video/video-synthesis')
+    // wan2.7 系首尾帧在主端点用 media 数组表达（kf2v 端点对它返回 url error，实测）
+    expect(firstCall[0]).toBe('https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis')
     expect(firstCall[1].body).toBe(JSON.stringify({
       model: 'wan2.7-i2v',
       input: {
-        first_frame_url: 'https://example.com/first.png',
-        last_frame_url: 'https://example.com/last.png',
+        media: [
+          { type: 'first_frame', url: 'https://example.com/first.png' },
+          { type: 'last_frame', url: 'https://example.com/last.png' },
+        ],
         prompt: '从清晨过渡到夜晚',
       },
     }))
@@ -267,5 +271,121 @@ describe('bailian video provider', () => {
     ).rejects.toThrow(/BAILIAN_VIDEO_OPTION_UNSUPPORTED: fps/)
 
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('接受 aspectRatio 但不将其下发到请求（回归：曾抛 BAILIAN_VIDEO_OPTION_UNSUPPORTED）', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        request_id: 'req-ar',
+        output: { task_id: 'task-ar', task_status: 'PENDING' },
+      }),
+    }))
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    const result = await generateBailianVideo({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/frame.png',
+      prompt: '镜头缓慢推进',
+      options: {
+        provider: 'bailian',
+        modelId: 'wan2.6-i2v-flash',
+        modelKey: 'bailian::wan2.6-i2v-flash',
+        aspectRatio: '9:16',
+        resolution: '720P',
+        duration: 5,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
+    const body = JSON.parse(String(requestInit.body)) as Record<string, unknown>
+    // aspectRatio 不得出现在请求体中（百炼会静默忽略，下发会造成比例受控的错觉）
+    expect(JSON.stringify(body)).not.toContain('9:16')
+    expect(body.parameters).toEqual({ resolution: '720P', duration: 5 })
+  })
+
+  it('wan2.7 系必须用 media 数组承载输入图（回归：用 img_url 会 Field required: input.media）', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ output: { task_id: 'task-media', task_status: 'PENDING' } }),
+    }))
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    await generateBailianVideo({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/frame.png',
+      prompt: '镜头缓慢推进',
+      options: {
+        provider: 'bailian',
+        modelId: 'wan2.7-i2v',
+        modelKey: 'bailian::wan2.7-i2v',
+        resolution: '720P',
+        duration: 5,
+      },
+    })
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
+    const body = JSON.parse(String(requestInit.body)) as { input: Record<string, unknown> }
+    expect(body.input.media).toEqual([
+      { type: 'first_frame', url: 'https://example.com/frame.png' },
+    ])
+    // 不得出现老字段
+    expect(body.input.img_url).toBeUndefined()
+  })
+
+  it('wan2.7 系首尾帧用 media 的 last_frame 语义项', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ output: { task_id: 'task-media2', task_status: 'PENDING' } }),
+    }))
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    await generateBailianVideo({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/first.png',
+      prompt: '运镜',
+      options: {
+        provider: 'bailian',
+        modelId: 'wan2.7-i2v',
+        modelKey: 'bailian::wan2.7-i2v',
+        lastFrameImageUrl: 'https://example.com/last.png',
+      },
+    })
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
+    const body = JSON.parse(String(requestInit.body)) as { input: Record<string, unknown> }
+    expect(body.input.media).toEqual([
+      { type: 'first_frame', url: 'https://example.com/first.png' },
+      { type: 'last_frame', url: 'https://example.com/last.png' },
+    ])
+  })
+
+  it('老模型仍用 img_url 字符串字段', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ output: { task_id: 'task-legacy', task_status: 'PENDING' } }),
+    }))
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    await generateBailianVideo({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/frame.png',
+      options: {
+        provider: 'bailian',
+        modelId: 'wan2.6-i2v-flash',
+        modelKey: 'bailian::wan2.6-i2v-flash',
+      },
+    })
+
+    const requestInit = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
+    const body = JSON.parse(String(requestInit.body)) as { input: Record<string, unknown> }
+    expect(body.input.img_url).toBe('https://example.com/frame.png')
+    expect(body.input.media).toBeUndefined()
   })
 })

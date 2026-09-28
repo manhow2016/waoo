@@ -1,7 +1,8 @@
 import { toFetchableUrl } from '@/lib/storage/utils'
+import { resolveDashScopeNativeBaseUrl } from './endpoint-base'
 
 export const BAILIAN_TTS_MODEL_ID = 'qwen3-tts-vd-2026-01-26'
-const BAILIAN_TTS_ENDPOINT = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation'
+const BAILIAN_TTS_PATH = '/services/aigc/multimodal-generation/generation'
 const BAILIAN_TTS_MAX_CHARS = 600
 
 export interface BailianTTSInput {
@@ -9,6 +10,8 @@ export interface BailianTTSInput {
   voiceId: string
   languageType?: string
   modelId?: string
+  /** DashScope baseUrl（可为兼容地址，内部会归一化） */
+  baseUrl?: string
 }
 
 export interface BailianTTSResult {
@@ -263,8 +266,9 @@ async function synthesizeSegment(params: {
   languageType: string
   modelId: string
   apiKey: string
+  baseUrl?: string
 }): Promise<BailianTTSSegmentResult> {
-  const response = await fetch(BAILIAN_TTS_ENDPOINT, {
+  const response = await fetch(`${resolveDashScopeNativeBaseUrl(params.baseUrl)}${BAILIAN_TTS_PATH}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${params.apiKey}`,
@@ -341,6 +345,7 @@ export async function synthesizeWithBailianTTS(
         languageType,
         modelId,
         apiKey,
+        baseUrl: input.baseUrl,
       })
       buffers.push(result.audioBuffer)
       totalCharacters += result.characters

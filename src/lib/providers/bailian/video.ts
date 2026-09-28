@@ -26,6 +26,14 @@ function assertRegistered(modelId: string): void {
 
 const BAILIAN_VIDEO_ENDPOINT = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis'
 const BAILIAN_KF2V_ENDPOINT = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/image2video/video-synthesis'
+/**
+ * wan2.7 系改用 media 数组承载输入图（type 为语义值 first_frame/last_frame），
+ * 老模型仍用 img_url / first_frame_url / last_frame_url 字符串字段。
+ */
+const BAILIAN_MEDIA_ARRAY_MODELS = new Set([
+  'wan2.7-i2v',
+])
+
 const BAILIAN_FIRST_LAST_FRAME_ONLY_MODELS = new Set([
   'wan2.2-kf2v-flash',
   'wanx2.1-kf2v-plus',
@@ -55,7 +63,8 @@ interface BailianVideoSubmitParameters {
 
 interface BailianVideoSubmitBody {
   model: string
-  input: Record<string, string>
+  // media 为数组形态（wan2.7 系），其余为字符串字段
+  input: Record<string, string | Array<{ type: string; url: string }>>
   parameters?: BailianVideoSubmitParameters
 }
 
@@ -89,6 +98,9 @@ function assertNoUnsupportedOptions(options: BailianGenerateRequestOptions): voi
     'modelId',
     'modelKey',
     'prompt',
+    // 仅接受不下发：百炼 i2v 的输出比例由输入图片决定，
+    // 实测 size/aspect_ratio 均被服务端静默忽略（详见 apply 脚本注释与单测）
+    'aspectRatio',
     'resolution',
     'size',
     'watermark',
@@ -127,6 +139,9 @@ function buildSubmitRequest(params: BailianVideoGenerateParams): {
     throw new Error(`BAILIAN_VIDEO_LAST_FRAME_UNSUPPORTED_FOR_MODEL: ${modelId}`)
   }
 
+  // 注意：params.options.aspectRatio 在此**有意忽略**。
+  // 百炼 i2v 仅按输入图片比例出图，传 size / aspect_ratio 都不会生效（已实测），
+  // 下发反而会让调用方误以为比例受控。
   const prompt = readTrimmedString(params.prompt) || readTrimmedString(params.options.prompt)
   const resolution = readTrimmedString(params.options.resolution)
   const size = readTrimmedString(params.options.size)
@@ -134,16 +149,27 @@ function buildSubmitRequest(params: BailianVideoGenerateParams): {
   const promptExtend = readOptionalBoolean(params.options.promptExtend)
   const duration = readOptionalPositiveInteger(params.options.duration, 'duration')
 
+  // wan2.7 系用 media 数组，老模型用字符串字段（实测差异，见文件头注释）
+  const usesMediaArray = BAILIAN_MEDIA_ARRAY_MODELS.has(modelId)
+  const mediaItems: Array<{ type: string; url: string }> = usesMediaArray
+    ? [
+      { type: 'first_frame', url: firstFrameUrl },
+      ...(firstLastFrame ? [{ type: 'last_frame', url: toFetchableUrl(lastFrameImageUrl) }] : []),
+    ]
+    : []
+
   const submitBody: BailianVideoSubmitBody = {
     model: modelId,
-    input: firstLastFrame
-      ? {
-        first_frame_url: firstFrameUrl,
-        last_frame_url: toFetchableUrl(lastFrameImageUrl),
-      }
-      : {
-        img_url: firstFrameUrl,
-      },
+    input: usesMediaArray
+      ? { media: mediaItems }
+      : firstLastFrame
+        ? {
+          first_frame_url: firstFrameUrl,
+          last_frame_url: toFetchableUrl(lastFrameImageUrl),
+        }
+        : {
+          img_url: firstFrameUrl,
+        },
   }
   if (prompt) {
     submitBody.input.prompt = prompt
@@ -170,7 +196,10 @@ function buildSubmitRequest(params: BailianVideoGenerateParams): {
   }
 
   return {
-    endpoint: firstLastFrame ? BAILIAN_KF2V_ENDPOINT : BAILIAN_VIDEO_ENDPOINT,
+    // wan2.7 系（media 数组）首尾帧也在主端点，走 kf2v 端点会 url error（实测）
+    endpoint: firstLastFrame && !BAILIAN_MEDIA_ARRAY_MODELS.has(modelId)
+      ? BAILIAN_KF2V_ENDPOINT
+      : BAILIAN_VIDEO_ENDPOINT,
     body: submitBody,
   }
 }

@@ -131,12 +131,18 @@ export default function CharacterSection({
     )
     const [highlightedCharacterId, setHighlightedCharacterId] = useState<string | null>(null)
     const scrollAnimationRef = useRef<number | null>(null)
+    // 记录已完成的聚焦滚动请求，避免数据刷新导致滚动动画反复重启（乱滚）
+    const lastScrollHandledRef = useRef<{ characterId: string; requestId: number } | null>(null)
 
     const totalAppearances = characters.reduce((sum, char) => sum + (char.appearances?.length || 0), 0)
 
     useEffect(() => {
         if (!focusCharacterId) return
         if (!characters.some(character => character.id === focusCharacterId)) return
+
+        // 同一请求（characterId + requestId）只滚动一次
+        const handled = lastScrollHandledRef.current
+        if (handled && handled.characterId === focusCharacterId && handled.requestId === focusCharacterRequestId) return
 
         const element = document.getElementById(`project-character-${focusCharacterId}`)
         if (!element) return
@@ -165,12 +171,16 @@ export default function CharacterSection({
                     scrollAnimationRef.current = window.requestAnimationFrame(animate)
                 } else {
                     scrollAnimationRef.current = null
+                    // 动画完成后再标记，避免数据刷新中断动画导致滚动停在半路
+                    lastScrollHandledRef.current = { characterId: focusCharacterId, requestId: focusCharacterRequestId }
                 }
             }
 
             scrollAnimationRef.current = window.requestAnimationFrame(animate)
         } else {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            // 无滚动容器场景同样标记，避免数据刷新重复触发 scrollIntoView
+            lastScrollHandledRef.current = { characterId: focusCharacterId, requestId: focusCharacterRequestId }
         }
 
         setHighlightedCharacterId(focusCharacterId)

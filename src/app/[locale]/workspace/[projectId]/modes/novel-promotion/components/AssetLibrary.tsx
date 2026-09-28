@@ -157,7 +157,7 @@ export default function AssetLibrary({
             </div>
 
             {/* 内容区域 - 复用AssetsStage，现在 AssetsStage 内部直接订阅和处理图片生成 */}
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 min-h-0 overflow-y-auto p-8">
               <AssetsStage
                 projectId={projectId}
                 isAnalyzingAssets={isAnalyzingAssets}

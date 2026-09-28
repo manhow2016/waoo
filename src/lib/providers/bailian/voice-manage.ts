@@ -1,4 +1,6 @@
-const BAILIAN_VOICE_CUSTOMIZATION_ENDPOINT = 'https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization'
+import { resolveDashScopeNativeBaseUrl } from './endpoint-base'
+
+const BAILIAN_VOICE_CUSTOMIZATION_PATH = '/services/audio/tts/customization'
 
 interface BailianVoiceManageResponse {
   request_id?: string
@@ -27,6 +29,7 @@ async function parseManageResponse(response: Response): Promise<BailianVoiceMana
 export async function deleteBailianVoice(params: {
   apiKey: string
   voiceId: string
+  baseUrl?: string
 }): Promise<{ requestId?: string }> {
   const apiKey = readTrimmedString(params.apiKey)
   const voiceId = readTrimmedString(params.voiceId)
@@ -37,7 +40,7 @@ export async function deleteBailianVoice(params: {
     throw new Error('BAILIAN_VOICE_ID_REQUIRED')
   }
 
-  const response = await fetch(BAILIAN_VOICE_CUSTOMIZATION_ENDPOINT, {
+  const response = await fetch(`${resolveDashScopeNativeBaseUrl(params.baseUrl)}${BAILIAN_VOICE_CUSTOMIZATION_PATH}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,

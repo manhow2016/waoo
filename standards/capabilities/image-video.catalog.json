@@ -1136,5 +1136,57 @@
         "supportGenerateAudio": false
       }
     }
+  },
+  {
+    "modelType": "image",
+    "provider": "bailian",
+    "modelId": "qwen-image-2.0-pro",
+    "capabilities": {
+      "image": {
+        "resolutionOptions": [
+          "1K",
+          "2K"
+        ]
+      }
+    }
+  },
+  {
+    "modelType": "image",
+    "provider": "bailian",
+    "modelId": "qwen-image-2.0",
+    "capabilities": {
+      "image": {
+        "resolutionOptions": [
+          "1K",
+          "2K"
+        ]
+      }
+    }
+  },
+  {
+    "modelType": "image",
+    "provider": "bailian",
+    "modelId": "wan2.7-image-pro",
+    "capabilities": {
+      "image": {
+        "resolutionOptions": [
+          "1K",
+          "2K"
+        ]
+      }
+    }
+  },
+  {
+    "modelType": "image",
+    "provider": "bailian",
+    "modelId": "wan2.7-image",
+    "capabilities": {
+      "image": {
+        "resolutionOptions": [
+          "1K",
+          "2K"
+        ]
+      }
+    }
   }
 ]

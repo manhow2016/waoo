@@ -289,6 +289,8 @@ export async function chatCompletionStream(
         apiKey: providerConfig.apiKey,
         baseUrl: providerConfig.baseUrl,
         temperature: options.temperature ?? 0.7,
+        reasoning,
+        reasoningEffort,
       })
       const completionParts = getCompletionParts(completion)
       let seq = 1

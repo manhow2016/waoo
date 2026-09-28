@@ -431,12 +431,25 @@ export async function touchTaskHeartbeat(taskId: string) {
 }
 
 export async function tryUpdateTaskProgress(taskId: string, progress: number, payload?: Record<string, unknown> | null) {
+  // 进度上报的 payload 只含进度字段（stage/message/displayMode 等）。
+  // 若整体替换，会连带丢掉提交时写入的 payload.meta.locale 与业务字段，
+  // 导致后续 dedupe 复用该任务时判定 locale 缺失（TASK_LOCALE_REQUIRED）。
+  // 这里用 JSON_MERGE_PATCH 在数据库侧原子合并，避免读改写竞态。
+  // 注意：SQL 标识符不能使用反引号，Prisma 的 $executeRaw 模板字符串会与之冲突。
+  if (payload) {
+    const merged = await prisma.$executeRaw`
+      UPDATE tasks
+      SET payload = JSON_MERGE_PATCH(COALESCE(payload, JSON_OBJECT()), ${JSON.stringify(payload)}),
+          progress = ${progress}
+      WHERE id = ${taskId}
+        AND status IN (${TASK_STATUS.QUEUED}, ${TASK_STATUS.PROCESSING})
+    `
+    return merged > 0
+  }
+
   const result = await taskModel.updateMany({
     where: activeTaskWhere(taskId),
-    data: {
-      progress,
-      ...(payload ? { payload: toNullableJson(payload) } : {}),
-    },
+    data: { progress },
   })
   return result.count > 0
 }

@@ -345,7 +345,7 @@ export function SettingsModal({
                 if (e.target === e.currentTarget) onClose()
             }}
         >
-            <div className="glass-surface-modal p-7 w-full max-w-3xl transform transition-all scale-100 max-h-[90vh] flex flex-col">
+            <div className="glass-surface-modal p-7 w-full max-w-[778px] transform transition-all scale-100 max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-center mb-2">
                     <h2 className="text-2xl font-bold text-[var(--glass-text-primary)]">{t('title')}</h2>
                     <div className="flex items-center gap-3">

@@ -1,6 +1,7 @@
 'use client'
 import { logInfo as _ulogInfo } from '@/lib/logging/core'
 
+import { useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../keys'
 import type { Character, Location, MediaRef, Prop } from '@/types/project'
@@ -115,8 +116,12 @@ export function useProjectAssets(projectId: string | null) {
         scope: 'project',
         projectId,
     })
-    const groups = groupAssetsByKind(assetsQuery.data)
-    const data = mapAssetGroupsToProjectAssetsData(groups)
+    // 稳定化派生数据：原始查询数据（React Query 缓存引用）未变化时不重建，
+    // 避免每次渲染产生新的 characters 数组引用，导致下游 effect/useMemo 频繁触发
+    const data = useMemo(() => {
+        const groups = groupAssetsByKind(assetsQuery.data)
+        return mapAssetGroupsToProjectAssetsData(groups)
+    }, [assetsQuery.data])
 
     return {
         ...assetsQuery,

@@ -103,12 +103,7 @@ export const PRESET_MODELS: PresetModel[] = [
     type: 'llm',
     provider: 'token61',
   },
-  {
-    modelId: 'qwen3.6-plus',
-    name: 'qwen3.6-plus',
-    type: 'llm',
-    provider: 'token61',
-  },
+
   //{ modelId: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro', type: 'llm', provider: 'token61' },
   //{ modelId: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash', type: 'llm', provider: 'token61' },
   // { modelId: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', type: 'llm', provider: 'token61' },
@@ -143,8 +138,14 @@ export const PRESET_MODELS: PresetModel[] = [
   },
   // 视频模型
   {
-    modelId: 'wan2.7-t2v',
-    name: 'wan2.7-t2v',
+    modelId: 'wan2.7-t2v-2026-06-12',
+    name: 'wan2.7-t2v-2026-06-12',
+    type: 'video',
+    provider: 'token61',
+  },
+  {
+    modelId: 'happyhorse-1.1-t2v',
+    name: 'happyhorse-1.1-t2v',
     type: 'video',
     provider: 'token61',
   },
@@ -163,6 +164,97 @@ export const PRESET_MODELS: PresetModel[] = [
     type: 'audio',
     provider: 'token61',
   },
+  // ===== 阿里云百炼（bailian）预设模型 =====
+  // 必须与 src/lib/providers/bailian/catalog.ts 的白名单一致，否则运行时抛 MODEL_NOT_REGISTERED
+  {
+    modelId: 'deepseek-v4.1-flash',
+    name: 'deepseek-v4.1-flash',
+    type: 'llm',
+    provider: 'bailian',
+  },
+
+  {
+    modelId: 'wan2.7-i2v',
+    name: 'wan2.7-i2v',
+    type: 'video',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.6-i2v',
+    name: 'wan2.6-i2v',
+    type: 'video',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.6-i2v-flash',
+    name: 'wan2.6-i2v-flash',
+    type: 'video',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.5-i2v-preview',
+    name: 'wan2.5-i2v-preview',
+    type: 'video',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.2-i2v-plus',
+    name: 'wan2.2-i2v-plus',
+    type: 'video',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.2-kf2v-flash',
+    name: 'wan2.2-kf2v-flash',
+    type: 'video',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wanx2.1-kf2v-plus',
+    name: 'wanx2.1-kf2v-plus',
+    type: 'video',
+    provider: 'bailian',
+  },
+
+  {
+    modelId: 'qwen-image-2.0-pro',
+    name: 'qwen-image-2.0-pro',
+    type: 'image',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'qwen-image-2.0',
+    name: 'qwen-image-2.0',
+    type: 'image',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.7-image-pro',
+    name: 'wan2.7-image-pro',
+    type: 'image',
+    provider: 'bailian',
+  },
+  {
+    modelId: 'wan2.7-image',
+    name: 'wan2.7-image',
+    type: 'image',
+    provider: 'bailian',
+  },
+
+  {
+    modelId: 'qwen3-tts-vd-2026-01-26',
+    name: 'qwen3-tts-vd-2026-01-26',
+    type: 'audio',
+    provider: 'bailian',
+  },
+  {
+    // 声音设计模型：经 bailian/voice-design.ts 走 DashScope customization 接口
+    modelId: 'qwen-voice-design',
+    name: 'qwen-voice-design',
+    type: 'audio',
+    provider: 'bailian',
+  },
+
   // 口型同步模型
   /*
   {
@@ -206,10 +298,18 @@ export const PRESET_PROVIDERS: Omit<Provider, 'apiKey' | 'hasApiKey'>[] = [
     baseUrl: 'https://token61.com/v1',
     gatewayRoute: 'openai-compat',
   },
+  {
+    // 阿里云百炼：官方直连模式（运行时由 OFFICIAL_ONLY_PROVIDER_KEYS 强制走 official 路由）
+    id: 'bailian',
+    name: '阿里百炼',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    gatewayRoute: 'official',
+  },
 ];
 
 const ZH_PROVIDER_NAME_MAP: Record<string, string> = {
   token61: 'Token六一',
+  bailian: '阿里百炼',
 };
 
 function isZhLocale(locale?: string): boolean {

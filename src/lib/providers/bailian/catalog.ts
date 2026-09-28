@@ -1,12 +1,16 @@
 import { registerOfficialModel } from '@/lib/providers/official/model-registry'
 import type { OfficialModelModality } from '@/lib/providers/official/model-registry'
 
-const BAILIAN_CATALOG: Readonly<Record<OfficialModelModality, readonly string[]>> = {
+export const BAILIAN_CATALOG: Readonly<Record<OfficialModelModality, readonly string[]>> = {
   llm: [
-    'qwen3.5-plus',
-    'qwen3.5-flash',
+    'deepseek-v4.1-flash',
   ],
-  image: [],
+  image: [
+    'qwen-image-2.0-pro',
+    'qwen-image-2.0',
+    'wan2.7-image-pro',
+    'wan2.7-image',
+  ],
   video: [
     'wan2.7-i2v',
     'wan2.6-i2v-flash',
@@ -18,6 +22,7 @@ const BAILIAN_CATALOG: Readonly<Record<OfficialModelModality, readonly string[]>
   ],
   audio: [
     'qwen3-tts-vd-2026-01-26',
+    'qwen-voice-design',
   ],
 }
 

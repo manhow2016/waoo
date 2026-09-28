@@ -1,4 +1,5 @@
 import { logInfo as _ulogInfo } from '@/lib/logging/core'
+import { resolveDashScopeNativeBaseUrl } from './endpoint-base'
 
 export interface VoiceDesignInput {
   voicePrompt: string
@@ -57,12 +58,11 @@ export async function createVoiceDesign(
   // - token61：POST {baseUrl}/audio/design，响应 { voice, preview_audio: { data, type } }
   // - bailian/其它：POST DashScope /services/audio/tts/customization，响应 { output: {...} }
   const isToken61 = input.providerKey === 'token61'
-  const endpointBase = input.baseUrl?.trim()
-    ? input.baseUrl.replace(/\/+$/, '')
-    : 'https://dashscope.aliyuncs.com/api/v1'
+  // token61 用其反代根 + /audio/design；bailian 必须归一化为 DashScope 原生 API 根，
+  // 否则用户配置的兼容地址（.../compatible-mode/v1）会被拼成不存在的路径而返回 404
   const endpoint = isToken61
-    ? `${endpointBase}/audio/design`
-    : `${endpointBase}/services/audio/tts/customization`
+    ? `${input.baseUrl?.trim() ? input.baseUrl.trim().replace(/\/+$/, '') : 'https://dashscope.aliyuncs.com/api/v1'}/audio/design`
+    : `${resolveDashScopeNativeBaseUrl(input.baseUrl)}/services/audio/tts/customization`
 
   try {
     const response = await fetch(endpoint, {

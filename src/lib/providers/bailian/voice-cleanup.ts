@@ -228,11 +228,11 @@ export async function cleanupUnreferencedBailianVoices(params: {
     }
   }
 
-  const { apiKey } = await getProviderConfig(params.scope.userId, 'bailian')
+  const { apiKey, baseUrl } = await getProviderConfig(params.scope.userId, 'bailian')
   const deletedVoiceIds: string[] = []
   for (const voiceId of toDelete) {
     try {
-      await deleteBailianVoice({ apiKey, voiceId })
+      await deleteBailianVoice({ apiKey, voiceId, baseUrl })
       deletedVoiceIds.push(voiceId)
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)

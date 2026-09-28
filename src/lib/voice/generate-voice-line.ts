@@ -246,12 +246,13 @@ export async function generateVoiceLine(params: {
       }
       throw new Error('请先为该发言人绑定百炼音色')
     }
-    const { apiKey } = await getProviderConfig(params.userId, audioSelection.provider)
+    const { apiKey, baseUrl } = await getProviderConfig(params.userId, audioSelection.provider)
     const result = await synthesizeWithBailianTTS({
       text,
       voiceId: voiceBinding.voiceId,
       modelId: audioSelection.modelId,
       languageType: 'Chinese',
+      baseUrl,
     }, apiKey)
     if (!result.success || !result.audioData) {
       throw new Error(normalizeBailianVoiceGenerationError(result.error))

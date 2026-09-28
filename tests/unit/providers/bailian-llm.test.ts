@@ -5,7 +5,7 @@ const createChatCompletionMock = vi.hoisted(() =>
     id: 'chatcmpl_bailian',
     object: 'chat.completion',
     created: 1,
-    model: 'qwen3.5-plus',
+    model: 'deepseek-v4.1-flash',
     choices: [
       {
         index: 0,
@@ -40,11 +40,12 @@ import { completeBailianLlm } from '@/lib/providers/bailian/llm'
 describe('bailian llm provider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.BAILIAN_LLM_TIMEOUT_MS
   })
 
-  it('calls dashscope openai-compatible endpoint for registered qwen model', async () => {
+  it('calls dashscope openai-compatible endpoint for registered model', async () => {
     const completion = await completeBailianLlm({
-      modelId: 'qwen3.5-plus',
+      modelId: 'deepseek-v4.1-flash',
       messages: [{ role: 'user', content: 'hello' }],
       apiKey: 'bl-key',
       temperature: 0.2,
@@ -53,14 +54,69 @@ describe('bailian llm provider', () => {
     expect(openAiCtorMock).toHaveBeenCalledWith({
       apiKey: 'bl-key',
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      timeout: 30_000,
+      timeout: 300_000,
     })
     expect(createChatCompletionMock).toHaveBeenCalledWith({
-      model: 'qwen3.5-plus',
+      model: 'deepseek-v4.1-flash',
       messages: [{ role: 'user', content: 'hello' }],
       temperature: 0.2,
+      enable_thinking: true,
     })
     expect(completion.choices[0]?.message?.content).toBe('ok')
+  })
+
+  it('默认超时足以覆盖推理模型（回归：30s 会导致片段切分 GENERATION_TIMEOUT）', async () => {
+    await completeBailianLlm({
+      modelId: 'deepseek-v4.1-flash',
+      messages: [{ role: 'user', content: 'hello' }],
+      apiKey: 'bl-key',
+    })
+
+    const ctorArgs = (openAiCtorMock.mock.calls as unknown as Array<[{ timeout?: number }]>)[0]?.[0]
+    expect(ctorArgs?.timeout).toBeGreaterThanOrEqual(120_000)
+  })
+
+  it('支持 BAILIAN_LLM_TIMEOUT_MS 覆盖超时', async () => {
+    process.env.BAILIAN_LLM_TIMEOUT_MS = '45000'
+
+    await completeBailianLlm({
+      modelId: 'deepseek-v4.1-flash',
+      messages: [{ role: 'user', content: 'hello' }],
+      apiKey: 'bl-key',
+    })
+
+    expect(openAiCtorMock).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 45_000 }),
+    )
+  })
+
+  it('reasoning=false 时下发 enable_thinking=false 以关闭思考', async () => {
+    await completeBailianLlm({
+      modelId: 'deepseek-v4.1-flash',
+      messages: [{ role: 'user', content: 'hello' }],
+      apiKey: 'bl-key',
+      reasoning: false,
+    })
+
+    expect(createChatCompletionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ enable_thinking: false }),
+    )
+    const body = (createChatCompletionMock.mock.calls as unknown as Array<[Record<string, unknown>]>)[0]?.[0]
+    expect(body.reasoning_effort).toBeUndefined()
+  })
+
+  it('reasoning=true 时透传 reasoning_effort，minimal 映射为 low', async () => {
+    await completeBailianLlm({
+      modelId: 'deepseek-v4.1-flash',
+      messages: [{ role: 'user', content: 'hello' }],
+      apiKey: 'bl-key',
+      reasoning: true,
+      reasoningEffort: 'minimal',
+    })
+
+    expect(createChatCompletionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ enable_thinking: true, reasoning_effort: 'low' }),
+    )
   })
 
   it('fails fast when model is not in official bailian catalog', async () => {

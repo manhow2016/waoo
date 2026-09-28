@@ -251,6 +251,8 @@ export async function chatCompletion(
           apiKey: providerConfig.apiKey,
           baseUrl: providerConfig.baseUrl,
           temperature,
+          reasoning,
+          reasoningEffort,
         })
         const completionParts = getCompletionParts(completion)
         logLlmRawOutput({

@@ -40,11 +40,12 @@ export async function generateBailianAudio(params: BailianAudioGenerateParams): 
     throw new Error('BAILIAN_TEXT_REQUIRED')
   }
 
-  const { apiKey } = await getProviderConfig(params.userId, params.options.provider)
+  const { apiKey, baseUrl } = await getProviderConfig(params.userId, params.options.provider)
   const result = await synthesizeWithBailianTTS({
     text,
     voiceId,
     modelId: params.options.modelId,
+    baseUrl,
   }, apiKey)
   if (!result.success || !result.audioData) {
     throw new Error(result.error || 'BAILIAN_AUDIO_SYNTHESIZE_FAILED')

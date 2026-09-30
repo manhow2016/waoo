@@ -416,6 +416,14 @@ model User {
   balance       UserBalance?
   preferences   UserPreference?
 
+  // 会员订阅
+  subscriptions Subscription[]
+
+  // 封禁状态（管理后台操作，jwt 回调每次读库即时生效）
+  isBanned     Boolean   @default(false)
+  bannedReason String?   @db.Text
+  bannedAt     DateTime?
+
   // 资产中心
   globalAssetFolders GlobalAssetFolder[]
   globalCharacters   GlobalCharacter[]
@@ -999,4 +1007,118 @@ model LegacyMediaRefBackup {
   @@index([runId])
   @@index([tableName, fieldName])
   @@map("legacy_media_refs_backup")
+}
+
+// ============================================================
+// 会员系统：平台级供应商准入元数据
+// 注意：本表只回答「谁能用哪个供应商」（准入与展示）。
+// 「某个供应商怎么调用」（协议、模型白名单）仍由 src/lib/providers/* 与
+// src/lib/model-gateway/* 的代码目录负责，避免产生第二个真相源。
+// ============================================================
+model Provider {
+  id        String   @id @default(uuid())
+  code      String   @unique // 供应商 key，如 token61 / bailian，对应代码 catalog 的 provider key
+  name      String // 展示名
+  isDefault Boolean  @default(false) // 平台默认供应商（免费用户可用），全局唯一
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  config    Json? // 展示与准入元数据（不含平台 Key）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([isDefault])
+  @@index([isActive, sortOrder])
+  @@map("providers")
+}
+
+// ============ 套餐定义 ============
+model Plan {
+  id                String   @id @default(uuid())
+  code              String   @unique // free / monthly / quarterly / yearly
+  name              String // 展示名
+  level             Int // 0=免费, 1=月付, 2=季付, 3=年付
+  price             Decimal  @default(0) @db.Decimal(10, 2) // 价格（元）
+  durationDay       Int // 有效天数：0 / 30 / 90 / 365
+  allowAllProviders Boolean  @default(false) // 是否允许使用非默认供应商
+  features          Json? // 展示用权益描述
+  sortOrder         Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([isActive, sortOrder])
+  @@map("plans")
+}
+
+// ============ 订阅记录 ============
+model Subscription {
+  id        String    @id @default(uuid())
+  userId    String
+  planId    String
+  startAt   DateTime
+  expireAt  DateTime
+  status    String // pending / active / expired / cancelled
+  orderNo   String    @unique // 订单号
+  paidAt    DateTime?
+  amount    Decimal   @default(0) @db.Decimal(10, 2) // 实付金额
+  payMethod String? // alipay / wechat / stripe / manual
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([userId, status])
+  @@index([expireAt, status])
+  @@index([createdAt])
+  @@map("subscriptions")
+}
+
+// ============ 管理员 ============
+model Admin {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String
+  role         String // super / operation / support
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  // 会话版本：改密时自增，使已签发的后台会话立即失效（否则改密后旧会话仍能用满 12 小时）
+  sessionVersion Int     @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  logs AdminLog[]
+
+  @@map("admins")
+}
+
+// ============ 管理员操作日志 ============
+model AdminLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  action     String // ban_user / refund / adjust_membership / update_config ...
+  targetType String? // user / order / plan / provider / config
+  targetId   String?
+  before     Json?
+  after      Json?
+  reason     String?  @db.Text
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
+  @@map("admin_logs")
+}
+
+// ============ 系统配置 ============
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("system_configs")
 }

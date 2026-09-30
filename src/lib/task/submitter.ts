@@ -24,11 +24,40 @@ import { getTaskFlowMeta } from '@/lib/llm-observe/stage-pipeline'
 import type { Locale } from '@/i18n/routing'
 import { attachTaskToRun, createRun, findReusableActiveRun } from '@/lib/run-runtime/service'
 import { isAiTaskType, workflowTypeFromTaskType } from '@/lib/run-runtime/workflow'
+import {
+  findBlockedProviders,
+  getDefaultModelProviders,
+  getProviderAccess,
+} from '@/lib/provider-access'
 
 const RUN_CENTRIC_TASK_TYPES = new Set<TaskType>([
   TASK_TYPE.STORY_TO_SCRIPT_RUN,
   TASK_TYPE.SCRIPT_TO_STORYBOARD_RUN,
 ])
+
+/**
+ * 入队前的供应商准入校验（第二道防线）。
+ *
+ * 任务实际使用哪个模型要到 worker 执行时才从「用户默认模型配置」解析，
+ * 因此这里校验同一组默认模型引用的供应商是否都在会员准入范围内：
+ * - 免费账号把默认模型指向非默认供应商时，直接拒绝入队，不占用队列资源；
+ * - 只校验默认模型，不校验账号里残留的其他模型配置，避免误伤仍可正常使用的默认供应商能力。
+ * 精确到单次调用的最终防线在 src/lib/api-config.ts 的 getProviderConfig 内。
+ */
+async function assertEnqueueProvidersAllowed(userId: string): Promise<void> {
+  const access = await getProviderAccess(userId)
+  if (access.allowAllProviders) return
+
+  const blockedProviders = findBlockedProviders(
+    access,
+    await getDefaultModelProviders(userId),
+  )
+  if (blockedProviders.length === 0) return
+
+  throw new Error(
+    `MEMBERSHIP_REQUIRED: default model provider(s) ${blockedProviders.join(', ')} require a paid membership`,
+  )
+}
 
 function isRunCentricTaskType(type: TaskType): boolean {
   return RUN_CENTRIC_TASK_TYPES.has(type)
@@ -129,6 +158,9 @@ export async function submitTask(params: {
     projectId: params.projectId,
     userId: params.userId,
   })
+
+  // 入队前的会员准入校验：越权配置直接拒绝，不占用队列资源
+  await assertEnqueueProvidersAllowed(params.userId)
 
   const normalizedPayloadBase = normalizeTaskPayload(params.type, params.payload || null)
   const normalizedPayloadMeta = toObject(normalizedPayloadBase.meta)

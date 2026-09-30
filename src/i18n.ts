@@ -49,7 +49,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
         layout,
         workspaceRedesign,
         home,
-        imageStudio
+        imageStudio,
+        membership,
+        admin
     ] = await Promise.all([
         import(`../messages/${locale}/common.json`),
         import(`../messages/${locale}/stages.json`),
@@ -83,7 +85,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
         import(`../messages/${locale}/layout.json`),
         import(`../messages/${locale}/workspaceRedesign.json`),
         import(`../messages/${locale}/home.json`),
-        import(`../messages/${locale}/imageStudio.json`)
+        import(`../messages/${locale}/imageStudio.json`),
+        import(`../messages/${locale}/membership.json`),
+        import(`../messages/${locale}/admin.json`)
     ]);
 
     return {
@@ -121,7 +125,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
             layout: layout.default,
             workspaceRedesign: workspaceRedesign.default,
             home: home.default,
-            imageStudio: imageStudio.default
+            imageStudio: imageStudio.default,
+            membership: membership.default,
+            admin: admin.default
         }
     };
 });

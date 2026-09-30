@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { GlassModalShell } from '@/components/ui/primitives'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import type { CapabilityValue } from '@/lib/model-config-contract'
 import { apiFetch } from '@/lib/api-fetch'
@@ -12,10 +13,11 @@ import {
   parseModelKey,
   useProviders,
 } from '../api-config'
-import { ApiConfigToolbar } from './ApiConfigToolbar'
+import { ApiConfigSaveStatus } from './ApiConfigSaveStatus'
 import { ApiConfigProviderList } from './ApiConfigProviderList'
 import { DefaultModelCards } from './DefaultModelCards'
 import { useApiConfigFilters } from './hooks/useApiConfigFilters'
+import { useProviderMembership } from './hooks/useProviderMembership'
 import { AppIcon } from '@/components/ui/icons'
 
 type TestStepStatus = 'pass' | 'fail' | 'skip'
@@ -29,6 +31,9 @@ interface TestStep {
 type TestStatus = 'idle' | 'testing' | 'passed' | 'failed'
 
 type CustomProviderType = 'gemini-compatible' | 'openai-compatible'
+
+/** 模型配置的分页：模型服务商（先配凭证）/ 默认模型 */
+type ApiConfigPage = 'providers' | 'models'
 
 const Icons = {
   settings: () => (
@@ -139,6 +144,20 @@ export function ApiConfigTabContainer() {
     models,
   })
 
+  // 会员准入（展示层）：锁定供应商置灰 + 升级引导，执行层在服务端
+  const { isProviderLocked } = useProviderMembership()
+
+  // 分页卡：模型服务商与默认模型各占一页，避免单个超长滚动页面
+  // 服务商在前：先配好供应商凭证，再选默认模型，符合实际操作顺序
+  const [page, setPage] = useState<ApiConfigPage>('providers')
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const handlePageChange = useCallback((next: ApiConfigPage) => {
+    setPage(next)
+    // 两个分页高度差异较大，切换时回到顶部，避免落到空白处
+    scrollRef.current?.scrollTo({ top: 0 })
+  }, [])
+
   const [showAddGeminiProvider, setShowAddGeminiProvider] = useState(false)
   const [newGeminiProvider, setNewGeminiProvider] = useState<{
     name: string
@@ -246,65 +265,84 @@ export function ApiConfigTabContainer() {
 
   return (
     <div className="flex h-full flex-col">
-      <ApiConfigToolbar
-        title={t('title')}
-        saveStatus={saveStatus}
-        savingState={savingState}
-        savingLabel={t('saving')}
-        savedLabel={t('saved')}
-        saveFailedLabel={t('saveFailed')}
-      />
+      {/* 卡片头部：左侧分页切换，右侧自动保存状态。常驻不滚动 */}
+      <div className='flex shrink-0 items-center justify-between gap-3 border-b border-[var(--glass-stroke-base)] px-6 py-3'>
+        <SegmentedControl<ApiConfigPage>
+          layout='compact'
+          value={page}
+          onChange={handlePageChange}
+          options={[
+            { value: 'providers', label: t('page.providers') },
+            { value: 'models', label: t('page.defaultModels') },
+          ]}
+        />
+        <ApiConfigSaveStatus
+          saveStatus={saveStatus}
+          savingState={savingState}
+          savingLabel={t('saving')}
+          savedLabel={t('saved')}
+          saveFailedLabel={t('saveFailed')}
+        />
+      </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-6 p-6">
-          <DefaultModelCards
-            t={t}
-            defaultModels={defaultModels}
-            getEnabledModelsByType={getEnabledModelsByType}
-            parseModelKey={parseModelKey}
-            encodeModelKey={encodeModelKey}
-            getProviderDisplayName={getProviderDisplayName}
-            locale={locale}
-            updateDefaultModel={updateDefaultModel}
-            batchUpdateDefaultModels={batchUpdateDefaultModels}
-            extractCapabilityFieldsFromModel={extractCapabilityFieldsFromModel}
-            toCapabilityFieldLabel={toCapabilityFieldLabel}
-            capabilityDefaults={capabilityDefaults}
-            updateCapabilityDefault={updateCapabilityDefault}
-            parseBySample={parseBySample}
-            workflowConcurrency={workflowConcurrency}
-            handleWorkflowConcurrencyChange={handleWorkflowConcurrencyChange}
-          />
+      <div ref={scrollRef} className='flex-1 overflow-y-auto'>
+        <div className='p-6'>
+          {/* 分页内容：与首页分页卡保持一致，一次只渲染当前分页 */}
+          {page === 'models' && (
+            <DefaultModelCards
+              t={t}
+              defaultModels={defaultModels}
+              getEnabledModelsByType={getEnabledModelsByType}
+              parseModelKey={parseModelKey}
+              encodeModelKey={encodeModelKey}
+              getProviderDisplayName={getProviderDisplayName}
+              locale={locale}
+              updateDefaultModel={updateDefaultModel}
+              batchUpdateDefaultModels={batchUpdateDefaultModels}
+              extractCapabilityFieldsFromModel={extractCapabilityFieldsFromModel}
+              toCapabilityFieldLabel={toCapabilityFieldLabel}
+              capabilityDefaults={capabilityDefaults}
+              updateCapabilityDefault={updateCapabilityDefault}
+              parseBySample={parseBySample}
+              workflowConcurrency={workflowConcurrency}
+              handleWorkflowConcurrencyChange={handleWorkflowConcurrencyChange}
+            />
+          )}
 
-          <ApiConfigProviderList
-            modelProviders={modelProviders}
-            allModels={models}
-            defaultModels={defaultModels}
-            getModelsForProvider={getModelsForProvider}
-            onAddGeminiProvider={() => setShowAddGeminiProvider(true)}
-            onToggleModel={toggleModel}
-            onUpdateApiKey={updateProviderApiKey}
-            onUpdateBaseUrl={updateProviderBaseUrl}
-            onReorderProviders={reorderProviders}
-            onDeleteModel={deleteModel}
-            onUpdateModel={updateModel}
-            onDeleteProvider={deleteProvider}
-            onAddModel={addModel}
-            onFlushConfig={flushConfig}
-            onToggleProviderHidden={updateProviderHidden}
-            labels={{
-              providerPool: t('providerPool'),
-              providerPoolDesc: t('providerPoolDesc'),
-              dragToSort: t('dragToSort'),
-              dragToSortHint: t('dragToSortHint'),
-              hideProvider: t('hideProvider'),
-              showProvider: t('showProvider'),
-              showHiddenProviders: t('showHiddenProviders'),
-              hideHiddenProviders: t('hideHiddenProviders'),
-              hiddenProvidersPrefix: t('hiddenProvidersPrefix'),
-              addGeminiProvider: t('addGeminiProvider'),
-            }}
-          />
+          {page === 'providers' && (
+            <ApiConfigProviderList
+              modelProviders={modelProviders}
+              allModels={models}
+              defaultModels={defaultModels}
+              getModelsForProvider={getModelsForProvider}
+              onAddGeminiProvider={() => setShowAddGeminiProvider(true)}
+              onToggleModel={toggleModel}
+              onUpdateApiKey={updateProviderApiKey}
+              onUpdateBaseUrl={updateProviderBaseUrl}
+              onReorderProviders={reorderProviders}
+              onDeleteModel={deleteModel}
+              onUpdateModel={updateModel}
+              onDeleteProvider={deleteProvider}
+              onAddModel={addModel}
+              onFlushConfig={flushConfig}
+              onToggleProviderHidden={updateProviderHidden}
+              isProviderLocked={isProviderLocked}
+              labels={{
+                providerPool: t('providerPool'),
+                providerPoolDesc: t('providerPoolDesc'),
+                dragToSort: t('dragToSort'),
+                dragToSortHint: t('dragToSortHint'),
+                hideProvider: t('hideProvider'),
+                showProvider: t('showProvider'),
+                showHiddenProviders: t('showHiddenProviders'),
+                hideHiddenProviders: t('hideHiddenProviders'),
+                hiddenProvidersPrefix: t('hiddenProvidersPrefix'),
+                addGeminiProvider: t('addGeminiProvider'),
+                lockedSectionTitle: tp('membershipLockedSectionTitle'),
+                lockedSectionDesc: tp('membershipLockedSectionDesc'),
+              }}
+            />
+          )}
         </div>
       </div>
 

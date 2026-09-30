@@ -23,6 +23,26 @@ import {
 export type ParsedModelKey = { provider: string, modelId: string }
 
 /**
+ * 用户默认模型字段（设置中心为每类能力各选一个默认模型）。
+ *
+ * 这是该字段集合的唯一声明：配置读取、保存校验、会员准入校验都从这里取用，
+ * 避免各模块各写一份导致口径漂移。
+ */
+export const DEFAULT_MODEL_FIELDS = [
+  'analysisModel',
+  'characterModel',
+  'locationModel',
+  'storyboardModel',
+  'editModel',
+  'videoModel',
+  'audioModel',
+  'lipSyncModel',
+  'voiceDesignModel',
+] as const
+
+export type DefaultModelField = (typeof DEFAULT_MODEL_FIELDS)[number]
+
+/**
  * 解析模型复合 Key（严格模式，仅接受 provider::modelId）
  */
 export function parseModelKey(key: string | null | undefined): ParsedModelKey | null {

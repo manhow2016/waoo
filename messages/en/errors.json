@@ -1,6 +1,7 @@
 {
     "UNAUTHORIZED": "Please log in first",
     "FORBIDDEN": "Access denied",
+    "MEMBERSHIP_REQUIRED": "This provider requires a paid membership. Free accounts can use the platform default provider",
     "NOT_FOUND": "Resource not found",
     "INSUFFICIENT_BALANCE": "Insufficient API balance. Please top up and retry",
     "RATE_LIMIT": "Too many requests. Please retry in {retryAfter} seconds",

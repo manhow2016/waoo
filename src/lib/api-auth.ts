@@ -22,6 +22,8 @@ export interface AuthSession {
         id: string
         name?: string | null
         email?: string | null
+        /** 账号是否已被封禁（由 auth.ts 的 jwt 回调每次读库写入） */
+        banned?: boolean
     }
 }
 
@@ -173,8 +175,11 @@ export function serverError(message = 'Internal server error') {
 export async function getAuthSession(): Promise<AuthSession | null> {
     const internalSession = await getInternalTaskSession()
     if (internalSession) return internalSession
-    const session = await getServerSession(authOptions)
-    return session as AuthSession | null
+    const session = (await getServerSession(authOptions)) as AuthSession | null
+    if (!session?.user?.id) return null
+    // 封禁账号：已签发的 JWT 会话同样视为未登录（jwt 回调每次读库写入 banned）
+    if (session.user.banned === true) return null
+    return session
 }
 
 /**

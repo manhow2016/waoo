@@ -29,6 +29,8 @@ import {
   type PricingApiType,
 } from '@/lib/model-pricing/catalog'
 import { getBillingMode } from '@/lib/billing/mode'
+import { getProviderAccess, isProviderIdAllowed, findBlockedProviders, collectModelProviders } from '@/lib/provider-access'
+import { DEFAULT_MODEL_FIELDS, type DefaultModelField } from '@/lib/config-service'
 import {
   DEFAULT_ANALYSIS_WORKFLOW_CONCURRENCY,
   DEFAULT_IMAGE_WORKFLOW_CONCURRENCY,
@@ -45,16 +47,6 @@ import { validateOpenAICompatMediaTemplate } from '@/lib/user-api/model-template
 type ApiModeType = 'gemini-sdk' | 'openai-official'
 type GatewayRouteType = 'official' | 'openai-compat'
 type LlmProtocolType = 'responses' | 'chat-completions'
-type DefaultModelField =
-  | 'analysisModel'
-  | 'characterModel'
-  | 'locationModel'
-  | 'storyboardModel'
-  | 'editModel'
-  | 'videoModel'
-  | 'audioModel'
-  | 'lipSyncModel'
-  | 'voiceDesignModel'
 
 interface StoredProvider {
   id: string
@@ -140,17 +132,6 @@ interface ApiConfigPutBody {
   workflowConcurrency?: unknown
 }
 
-const DEFAULT_MODEL_FIELDS: DefaultModelField[] = [
-  'analysisModel',
-  'characterModel',
-  'locationModel',
-  'storyboardModel',
-  'editModel',
-  'videoModel',
-  'audioModel',
-  'lipSyncModel',
-  'voiceDesignModel',
-]
 const CAPABILITY_MODEL_TYPES: readonly UnifiedModelType[] = [
   'image',
   'video',
@@ -1755,9 +1736,17 @@ export const GET = apiHandler(async () => {
     video: pref?.videoConcurrency,
   })
 
+  // 会员准入快照：供设置中心渲染「锁定 / 升级解锁」，前端不再自行推断权限
+  const providerAccess = await getProviderAccess(userId)
+
   return NextResponse.json({
     models: [...pricedModels, ...disabledPresets],
     providers,
+    providerAccess: {
+      allowAllProviders: providerAccess.allowAllProviders,
+      defaultProviderCode: providerAccess.defaultProviderCode,
+      allowedProviderCodes: providerAccess.allowedProviderCodes,
+    },
     defaultModels,
     capabilityDefaults,
     workflowConcurrency,
@@ -1797,6 +1786,15 @@ export const PUT = apiHandler(async (request: NextRequest) => {
     select: {
       customProviders: true,
       customModels: true,
+      analysisModel: true,
+      characterModel: true,
+      locationModel: true,
+      storyboardModel: true,
+      editModel: true,
+      videoModel: true,
+      audioModel: true,
+      lipSyncModel: true,
+      voiceDesignModel: true,
     },
   })
   const existingProviders = parseStoredProviders(existingPref?.customProviders)
@@ -1806,6 +1804,49 @@ export const PUT = apiHandler(async (request: NextRequest) => {
     : resolveStoredMediaTemplates(resolveStoredLlmProtocols(normalizedModelsInput, existingModels), existingModels)
 
   const providerSourceForValidation = normalizedProviders ?? existingProviders
+
+  // ===== 会员准入校验（第一道防线，前端友好拦截）=====
+  // 免费用户只能配置/启用默认供应商；非默认供应商即使绕过前端也会在此被拒绝。
+  const providerAccess = await getProviderAccess(userId)
+  if (!providerAccess.allowAllProviders) {
+    const blockedProviderIds = providerSourceForValidation
+      .filter((provider) => {
+        const hasApiKey = typeof provider.apiKey === 'string' && provider.apiKey.trim().length > 0
+        return hasApiKey && !isProviderIdAllowed(providerAccess, provider.id)
+      })
+      .map((provider) => provider.id)
+
+    if (blockedProviderIds.length > 0) {
+      throw new ApiError('MEMBERSHIP_REQUIRED', {
+        code: 'PROVIDER_REQUIRES_UPGRADE',
+        field: 'providers',
+        providers: blockedProviderIds,
+        defaultProviderCode: providerAccess.defaultProviderCode,
+      })
+    }
+
+    // 默认模型才是 worker 运行时真正解析的目标，因此只校验这组选择。
+    // 账号里残留的、未被选为默认的模型不会影响默认供应商能力，故不拦截。
+    const effectiveDefaultModelKeys = DEFAULT_MODEL_FIELDS.map((field) => {
+      const submitted = normalizedDefaults?.[field]
+      if (submitted !== undefined) return submitted
+      return existingPref?.[field] ?? null
+    })
+    const blockedModelProviders = findBlockedProviders(
+      providerAccess,
+      collectModelProviders(effectiveDefaultModelKeys),
+    )
+
+    if (blockedModelProviders.length > 0) {
+      throw new ApiError('MEMBERSHIP_REQUIRED', {
+        code: 'PROVIDER_REQUIRES_UPGRADE',
+        field: 'defaultModels',
+        providers: blockedModelProviders,
+        defaultProviderCode: providerAccess.defaultProviderCode,
+      })
+    }
+  }
+
   if (normalizedModels !== undefined) {
     validateModelProviderConsistency(normalizedModels, providerSourceForValidation)
     validateModelProviderTypeSupport(normalizedModels, providerSourceForValidation)

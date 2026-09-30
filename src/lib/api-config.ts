@@ -9,6 +9,8 @@
 
 import { prisma } from './prisma'
 import { decryptApiKey } from './crypto-utils'
+import { getProviderKey } from './provider-key'
+import { assertProvidersAllowed, getProviderAccess, isProviderIdAllowed } from './provider-access'
 import {
   composeModelKey,
   parseModelKeyStrict,
@@ -336,12 +338,9 @@ function findModelByKey(models: CustomModel[], modelKey: string): CustomModel | 
 
 /**
  * 提取提供商主键（用于多实例场景，如 gemini-compatible:uuid）
+ * 实现已收敛到叶模块 src/lib/provider-key.ts，此处仅做向后兼容的再导出。
  */
-export function getProviderKey(providerId?: string): string {
-  if (!providerId) return ''
-  const colonIndex = providerId.indexOf(':')
-  return colonIndex === -1 ? providerId : providerId.slice(0, colonIndex)
-}
+export { getProviderKey }
 
 /**
  * 统一模型选择解析（严格模式）
@@ -442,6 +441,10 @@ export interface ProviderConfig {
 }
 
 export async function getProviderConfig(userId: string, providerId: string): Promise<ProviderConfig> {
+  // 会员准入最终防线：任何真正要使用供应商密钥的运行时代码路径都会经过这里。
+  // 不能信任入队时的判断，也不能信任前端提交，必须在此重新查库。
+  await assertProvidersAllowed(userId, [providerId])
+
   const { providers } = await readUserConfig(userId)
   const provider = pickProviderStrict(providers, providerId)
 
@@ -462,23 +465,25 @@ export async function getProviderConfig(userId: string, providerId: string): Pro
 /**
  * 按 provider key 前缀查找已配置的 provider（不抛错）。
  * 用于需要"任一可用 provider"的场景（如 voice-design 动态解析）。
+ * 会员准入同样在此生效，但语义是"跳过不可用项"而非直接失败。
  */
 export async function findProviderConfig(
   userId: string,
   providerKeys: string[],
 ): Promise<ProviderConfig | null> {
   const { providers } = await readUserConfig(userId)
+  const access = await getProviderAccess(userId)
   for (const provider of providers) {
     const providerKey = getProviderKey(provider.id)
-    if (providerKeys.includes(providerKey) && provider.apiKey) {
-      return {
-        id: provider.id,
-        name: provider.name,
-        apiKey: decryptApiKey(provider.apiKey),
-        baseUrl: normalizeProviderBaseUrl(provider.id, provider.baseUrl),
-        apiMode: provider.apiMode,
-        gatewayRoute: provider.gatewayRoute,
-      }
+    if (!providerKeys.includes(providerKey) || !provider.apiKey) continue
+    if (!isProviderIdAllowed(access, provider.id)) continue
+    return {
+      id: provider.id,
+      name: provider.name,
+      apiKey: decryptApiKey(provider.apiKey),
+      baseUrl: normalizeProviderBaseUrl(provider.id, provider.baseUrl),
+      apiMode: provider.apiMode,
+      gatewayRoute: provider.gatewayRoute,
     }
   }
   return null

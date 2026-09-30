@@ -5,6 +5,8 @@ export type RouteCategory =
   | 'projects'
   | 'tasks'
   | 'user'
+  | 'membership'
+  | 'admin'
   | 'auth'
   | 'infra'
   | 'system'
@@ -17,6 +19,8 @@ export type RouteContractGroup =
   | 'crud-novel-promotion-routes'
   | 'task-infra-routes'
   | 'user-project-routes'
+  | 'membership-routes'
+  | 'admin-routes'
   | 'auth-routes'
   | 'infra-routes'
 
@@ -27,7 +31,30 @@ export type RouteCatalogEntry = {
 }
 
 const ROUTE_FILES = [
+  'src/app/api/admin/admins/[id]/password/route.ts',
+  'src/app/api/admin/admins/[id]/route.ts',
+  'src/app/api/admin/admins/route.ts',
+  'src/app/api/admin/auth/login/route.ts',
+  'src/app/api/admin/auth/logout/route.ts',
+  'src/app/api/admin/auth/me/route.ts',
+  'src/app/api/admin/auth/password/route.ts',
+  'src/app/api/admin/configs/route.ts',
   'src/app/api/admin/download-logs/route.ts',
+  'src/app/api/admin/logs/route.ts',
+  'src/app/api/admin/orders/[id]/refund/route.ts',
+  'src/app/api/admin/orders/[id]/repair/route.ts',
+  'src/app/api/admin/orders/route.ts',
+  'src/app/api/admin/payments/methods/route.ts',
+  'src/app/api/admin/payments/route.ts',
+  'src/app/api/admin/plans/[id]/route.ts',
+  'src/app/api/admin/plans/route.ts',
+  'src/app/api/admin/providers/[id]/route.ts',
+  'src/app/api/admin/providers/route.ts',
+  'src/app/api/admin/stats/route.ts',
+  'src/app/api/admin/users/[id]/ban/route.ts',
+  'src/app/api/admin/users/[id]/membership/route.ts',
+  'src/app/api/admin/users/[id]/route.ts',
+  'src/app/api/admin/users/route.ts',
   'src/app/api/asset-hub/ai-design-character/route.ts',
   'src/app/api/asset-hub/ai-design-location/route.ts',
   'src/app/api/asset-hub/ai-modify-character/route.ts',
@@ -65,6 +92,7 @@ const ROUTE_FILES = [
   'src/app/api/assets/[assetId]/variants/[variantId]/route.ts',
   'src/app/api/assets/route.ts',
   'src/app/api/auth/[...nextauth]/route.ts',
+  'src/app/api/auth/captcha/route.ts',
   'src/app/api/auth/register/route.ts',
   'src/app/api/cos/image/route.ts',
   'src/app/api/files/[...path]/route.ts',
@@ -72,6 +100,13 @@ const ROUTE_FILES = [
   'src/app/api/image-studio/generate/route.ts',
   'src/app/api/image-studio/prompt-optimize/route.ts',
   'src/app/api/image-studio/reverse-prompt/route.ts',
+  'src/app/api/membership/orders/[orderNo]/cancel/route.ts',
+  'src/app/api/membership/orders/route.ts',
+  'src/app/api/membership/plans/route.ts',
+  'src/app/api/membership/providers/route.ts',
+  'src/app/api/membership/status/route.ts',
+  'src/app/api/membership/subscribe/route.ts',
+  'src/app/api/membership/webhook/route.ts',
   'src/app/api/storage/sign/route.ts',
   'src/app/api/novel-promotion/[projectId]/ai-create-character/route.ts',
   'src/app/api/novel-promotion/[projectId]/ai-create-location/route.ts',
@@ -187,6 +222,10 @@ function resolveCategory(routeFile: string): RouteCategory {
     return 'tasks'
   }
   if (routeFile.startsWith('src/app/api/user/') || routeFile === 'src/app/api/user-preference/route.ts') return 'user'
+  if (routeFile.startsWith('src/app/api/membership/')) return 'membership'
+  // download-logs 位于 admin 路径下，但使用用户会话且历史上归属 infra，保持原分组不变
+  if (routeFile === 'src/app/api/admin/download-logs/route.ts') return 'infra'
+  if (routeFile.startsWith('src/app/api/admin/')) return 'admin'
   if (routeFile.startsWith('src/app/api/auth/')) return 'auth'
   if (routeFile.startsWith('src/app/api/system/')) return 'system'
   return 'infra'
@@ -241,6 +280,10 @@ function resolveContractGroup(routeFile: string): RouteContractGroup {
   if (routeFile.startsWith('src/app/api/projects/') || routeFile.startsWith('src/app/api/user/')) {
     return 'user-project-routes'
   }
+  if (routeFile.startsWith('src/app/api/membership/')) return 'membership-routes'
+  // download-logs 位于 admin 路径下，但使用用户会话且历史上归属 infra，保持原分组不变
+  if (routeFile === 'src/app/api/admin/download-logs/route.ts') return 'infra-routes'
+  if (routeFile.startsWith('src/app/api/admin/')) return 'admin-routes'
   if (routeFile.startsWith('src/app/api/auth/')) return 'auth-routes'
   return 'infra-routes'
 }

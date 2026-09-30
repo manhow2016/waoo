@@ -3,6 +3,7 @@ import type { UnifiedErrorCode } from './codes'
 export const USER_ERROR_MESSAGES_ZH: Record<UnifiedErrorCode, string> = {
   UNAUTHORIZED: '请先登录后再试。',
   FORBIDDEN: '你没有权限执行此操作。',
+  MEMBERSHIP_REQUIRED: '该模型供应商需要升级会员后使用，免费账号可使用平台默认供应商。',
   NOT_FOUND: '没有找到对应的数据。',
   INVALID_PARAMS: '请求参数不正确，请检查后重试。',
   MISSING_CONFIG: '系统配置不完整，请联系管理员。',

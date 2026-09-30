@@ -44,6 +44,12 @@ export const authOptions: any = {
           return null
         }
 
+        // 封禁账号不允许再建立新会话
+        if (user.isBanned) {
+          logAuthAction('LOGIN', user.email, { error: 'Account banned', userId: user.id })
+          return null
+        }
+
         logAuthAction('LOGIN', user.email, { userId: user.id, success: true })
 
         return {
@@ -65,12 +71,24 @@ export const authOptions: any = {
       if (user) {
         token.id = user.id
       }
+      // 封禁状态每次读库：JWT 策略下服务端无法吊销已签发的 token，
+      // 因此只能在每次读取会话时校验，账号被封禁后有效会话立即失效。
+      // 账号已被删除时同样视为不可用（避免残留 token 继续命中会话）。
+      if (token?.id) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { isBanned: true },
+        })
+        token.banned = current ? current.isBanned === true : true
+      }
       return token
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async session({ session, token }: any) {
       if (token && session.user) {
         session.user.id = token.id as string
+        // token 中的封禁状态必须透传到 session，否则 getAuthSession 无法据此拒绝被封禁的会话
+        session.user.banned = token.banned === true
       }
       return session
     }

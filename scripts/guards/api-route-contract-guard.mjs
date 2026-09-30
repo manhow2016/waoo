@@ -16,9 +16,16 @@ export const API_HANDLER_ALLOWLIST = new Set([
 
 export const PUBLIC_ROUTE_ALLOWLIST = new Set([
   'src/app/api/auth/[...nextauth]/route.ts',
+  // 图片验证码必须在登录前可用
+  'src/app/api/auth/captcha/route.ts',
   'src/app/api/auth/register/route.ts',
   'src/app/api/cos/image/route.ts',
   'src/app/api/files/[...path]/route.ts',
+  // 后台登录/登出：此时尚无任何会话，鉴权由接口自身完成（限流 + 账密校验）
+  'src/app/api/admin/auth/login/route.ts',
+  'src/app/api/admin/auth/logout/route.ts',
+  // 支付渠道回调：以渠道签名鉴权，不使用用户会话
+  'src/app/api/membership/webhook/route.ts',
   'src/app/api/storage/sign/route.ts',
   'src/app/api/system/boot-id/route.ts',
 ])
@@ -27,6 +34,8 @@ const AUTH_CALL_PATTERNS = [
   /\brequireUserAuth\s*\(/,
   /\brequireProjectAuth\s*\(/,
   /\brequireProjectAuthLight\s*\(/,
+  // 后台接口使用完全隔离的独立会话
+  /\brequireAdminRole\s*\(/,
 ]
 
 function fail(title, details = []) {

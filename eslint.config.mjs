@@ -16,6 +16,8 @@ const eslintConfig = [
       "node_modules/**",
       ".agent/**",
       ".next/**",
+      // 切换部署时产生的构建回滚副本，否则 lint 会把整份旧产物当源码扫描
+      ".next.old-*/**",
       "out/**",
       "build/**",
       "coverage/**",

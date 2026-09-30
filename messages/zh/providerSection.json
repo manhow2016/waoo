@@ -3,5 +3,12 @@
   "name": "名称",
   "add": "添加",
   "save": "保存",
-  "fillRequired": "请填写必要信息"
+  "fillRequired": "请填写必要信息",
+  "membershipLockedSectionTitle": "需要会员解锁的供应商",
+  "membershipLockedSectionDesc": "免费账号可使用平台默认供应商且不限次数。升级会员后可自由配置下列供应商（API Key 由你自己填写）。",
+  "membershipLockedBadge": "需要会员",
+  "membershipLockedHint": "升级会员后可启用该供应商，API Key 仍由你自己填写与承担。",
+  "membershipStaleKeyHint": "该供应商仍保存着 API Key，但它已不在你的可用范围内。清除后即可正常保存其他配置。",
+  "membershipClearStaleKey": "清除已保存的 Key",
+  "membershipUpgradeCta": "升级解锁"
 }

@@ -3,5 +3,12 @@
   "name": "Name",
   "add": "Add",
   "save": "Save",
-  "fillRequired": "Please fill in required fields"
+  "fillRequired": "Please fill in required fields",
+  "membershipLockedSectionTitle": "Providers that require a membership",
+  "membershipLockedSectionDesc": "Free accounts can use the platform default provider without limits. Upgrade to configure the providers below with your own API keys.",
+  "membershipLockedBadge": "Membership",
+  "membershipLockedHint": "Upgrade to enable this provider. You still supply and pay for your own API key.",
+  "membershipStaleKeyHint": "A stored API key still exists for this provider, but it is outside your current plan. Clear it to keep saving other settings.",
+  "membershipClearStaleKey": "Clear stored key",
+  "membershipUpgradeCta": "Upgrade to unlock"
 }

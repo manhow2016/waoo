@@ -1,6 +1,7 @@
 {
     "UNAUTHORIZED": "请先登录",
     "FORBIDDEN": "没有权限访问",
+    "MEMBERSHIP_REQUIRED": "该供应商需要升级会员后使用，免费用户可使用平台默认供应商",
     "NOT_FOUND": "资源不存在",
     "INSUFFICIENT_BALANCE": "API余额不足，请充值后重试",
     "RATE_LIMIT": "请求过于频繁，请 {retryAfter} 秒后重试",

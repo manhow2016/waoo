@@ -263,6 +263,14 @@ export function useProviders(): UseProvidersReturn {
     const [loading, setLoading] = useState(true)
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    /**
+     * 「已保存」气泡归零为 idle 的定时器句柄。
+     *
+     * 必须持有并可取消：否则上一轮保存成功安排的 3 秒定时器，
+     * 会把紧接着的下一次保存结果（尤其是「保存失败」）抹成 idle，
+     * 导致写库失败在界面上完全静默。
+     */
+    const savedResetRef = useRef<NodeJS.Timeout | null>(null)
     const initializedRef = useRef(false)
 
     // 始终持有最新值的 refs，用于避免异步保存时读到旧的闭包值
@@ -383,6 +391,12 @@ export function useProviders(): UseProvidersReturn {
             saveTimeoutRef.current = null
         }
         if (!silent) {
+            // 新一轮保存开始：取消上一轮「已保存」的归零定时器，
+            // 否则它会把本次结果（尤其是失败）覆盖成 idle
+            if (savedResetRef.current) {
+                clearTimeout(savedResetRef.current)
+                savedResetRef.current = null
+            }
             setSaveStatus('saving')
         }
         try {
@@ -406,7 +420,10 @@ export function useProviders(): UseProvidersReturn {
             if (res.ok) {
                 if (!silent) {
                     setSaveStatus('saved')
-                    setTimeout(() => setSaveStatus('idle'), 3000)
+                    savedResetRef.current = setTimeout(() => {
+                        savedResetRef.current = null
+                        setSaveStatus('idle')
+                    }, 3000)
                 }
                 return true
             } else {

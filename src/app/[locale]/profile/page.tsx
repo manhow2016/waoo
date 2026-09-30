@@ -36,10 +36,10 @@ export default function ProfilePage() {
       <Navbar />
 
       <main className='max-w-[1400px] mx-auto px-6 py-8'>
-        <div className='flex gap-6 h-[calc(100vh-140px)]'>
-          {/* 左侧侧边栏 */}
-          <div className='w-64 flex-shrink-0'>
-            <div className='glass-surface-elevated h-full flex flex-col p-5'>
+        <div className='flex flex-col gap-4 lg:h-[calc(100vh-140px)] lg:flex-row lg:gap-6'>
+          {/* 左侧侧边栏：小屏堆叠到内容区上方，避免固定宽度侧栏挤压主内容 */}
+          <div className='w-full flex-shrink-0 lg:w-64'>
+            <div className='glass-surface-elevated flex flex-col p-5 lg:h-full'>
               {/* 用户信息 */}
               <div className='mb-6'>
                 <div className='mb-4'>
@@ -71,8 +71,8 @@ export default function ProfilePage() {
           </div>
 
           {/* 右侧内容区 */}
-          <div className='flex-1 min-w-0'>
-            <div className='glass-surface-elevated h-full flex flex-col'>
+          <div className='min-w-0 flex-1'>
+            <div className='glass-surface-elevated flex flex-col lg:h-full'>
               <ApiConfigTab />
             </div>
           </div>

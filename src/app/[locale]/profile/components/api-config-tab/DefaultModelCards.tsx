@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { AppIcon } from '@/components/ui/icons';
 import type { AppIconName } from '@/components/ui/icons';
 import { ModelCapabilityDropdown } from '@/components/ui/config-modals/ModelCapabilityDropdown';
+import { ApiConfigPageHeader } from './ApiConfigPageHeader';
 import type {
   CapabilityValue,
   ModelCapabilities,
@@ -416,27 +417,14 @@ export function DefaultModelCards(allProps: DefaultModelCardsProps) {
   ];
 
   return (
-    <div className='p-8 rounded-3xl bg-[var(--glass-bg-base)] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] relative overflow-hidden'>
-      {/* Background glow effects */}
-      <div className='absolute -top-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none' />
-      <div className='absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none' />
+    <div className='relative'>
+      <ApiConfigPageHeader
+        icon={<AppIcon name='settingsHex' className='w-4 h-4' />}
+        title={t('defaultModels')}
+        description={t('defaultModel.hint')}
+      />
 
       <div className='relative z-10'>
-        {/* Header */}
-        <div className='mb-8'>
-          <div className='flex items-center gap-2.5 mb-1'>
-            <span className='glass-surface-soft inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--glass-text-secondary)]'>
-              <AppIcon name='settingsHex' className='w-4 h-4' />
-            </span>
-            <h2 className='text-xl font-bold text-[var(--glass-text-primary)]'>
-              {t('defaultModels')}
-            </h2>
-          </div>
-          <p className='text-[13px] text-[var(--glass-text-secondary)] ml-[38px]'>
-            {t('defaultModel.hint')}
-          </p>
-        </div>
-
         {/* ===== Section 1: Core Foundation ===== */}
         <h3 className='text-[17px] font-bold text-[var(--glass-text-primary)] mb-5 flex items-center gap-2'>
           <AppIcon name='bolt' className='w-5 h-5 text-blue-500' />
@@ -464,7 +452,7 @@ export function DefaultModelCards(allProps: DefaultModelCardsProps) {
                       event.target.value,
                     )
                   }
-                  className='glass-input-base h-6 w-12 px-1.5 py-0 text-[11px]'
+                  className='glass-input-base h-6 w-12! px-1.5 py-0 text-[11px]'
                 />
               </div>
             </div>
@@ -508,7 +496,7 @@ export function DefaultModelCards(allProps: DefaultModelCardsProps) {
                   onChange={(event) =>
                     handleWorkflowConcurrencyChange('video', event.target.value)
                   }
-                  className='glass-input-base h-6 w-12 px-1.5 py-0 text-[11px]'
+                  className='glass-input-base h-6 w-12! px-1.5 py-0 text-[11px]'
                 />
               </div>
             </div>
@@ -550,7 +538,7 @@ export function DefaultModelCards(allProps: DefaultModelCardsProps) {
               onChange={(event) =>
                 handleWorkflowConcurrencyChange('image', event.target.value)
               }
-              className='glass-input-base h-6 w-12 px-1.5 py-0 text-[11px]'
+              className='glass-input-base h-6 w-12! px-1.5 py-0 text-[11px]'
             />
           </div>
         </div>

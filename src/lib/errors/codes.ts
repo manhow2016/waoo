@@ -24,6 +24,14 @@ export const ERROR_CATALOG = {
     userMessageKey: 'errors.FORBIDDEN',
     defaultMessage: 'Forbidden',
   },
+  MEMBERSHIP_REQUIRED: {
+    // 免费用户使用非默认供应商 → 需要升级会员
+    httpStatus: 403,
+    retryable: false,
+    category: ERROR_CATEGORY.AUTH,
+    userMessageKey: 'errors.MEMBERSHIP_REQUIRED',
+    defaultMessage: 'Membership upgrade required to use this provider',
+  },
   NOT_FOUND: {
     httpStatus: 404,
     retryable: false,

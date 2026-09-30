@@ -6,9 +6,13 @@
     "node": ">=18.18.0",
     "npm": ">=9.0.0"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "postinstall": "prisma generate",
     "prepare": "husky",
+    "db:seed": "tsx --env-file=.env prisma/seed.ts",
     "dev": "npm run storage:init && concurrently --kill-others \"npm run dev:next\" \"npm run dev:worker\" \"npm run dev:watchdog\" \"npm run dev:board\"",
     "dev:next": "cross-env NODE_OPTIONS=\"--no-deprecation\" next dev --turbopack -H 0.0.0.0",
     "dev:worker": "tsx watch --env-file=.env src/lib/workers/index.ts",
@@ -66,6 +70,8 @@
     "check:prompt-json-canary": "node scripts/guards/prompt-json-canary-guard.mjs",
     "billing:cleanup-pending-freezes": "tsx scripts/billing-cleanup-pending-freezes.ts",
     "billing:reconcile-ledger": "tsx scripts/billing-reconcile-ledger.ts",
+    "membership:admin": "tsx --env-file=.env scripts/membership-admin.ts",
+    "membership:sweep": "tsx --env-file=.env scripts/membership-admin.ts sweep",
     "cleanup:remove-legacy-voice-data": "tsx scripts/cleanup-remove-legacy-voice-data.ts",
     "test:billing": "npm run test:billing:coverage",
     "test:billing:unit": "cross-env BILLING_TEST_BOOTSTRAP=0 vitest run tests/unit/billing",

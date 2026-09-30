@@ -5,10 +5,16 @@ import { useTranslations } from 'next-intl';
 import LanguageSwitcher from './LanguageSwitcher';
 import { AppIcon } from '@/components/ui/icons';
 import { Link } from '@/i18n/navigation';
+import { useMembershipStatus } from '@/hooks/common/useMembershipStatus';
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const t = useTranslations('nav');
+  const tm = useTranslations('membership');
+  const membership = useMembershipStatus({ enabled: !!session });
+  // 免费用户显示「升级」；付费但临近到期显示「剩 N 天」续费提醒
+  const showUpgradeBadge = !membership.loading && !membership.isActive;
+  const showRenewalBadge = !membership.loading && membership.expiringSoon;
 
   return (
     <nav className='glass-nav sticky top-0 z-50'>
@@ -45,6 +51,27 @@ export default function Navbar() {
                   {t('assetHub')}
                 </Link>
 
+                <Link
+                  href={{ pathname: '/membership' }}
+                  className='text-sm text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)] font-medium transition-colors flex items-center gap-1'
+                  title={tm('navEntry')}
+                >
+                  <AppIcon name='diamond' className='w-4 h-4' />
+                  {tm('navEntry')}
+                  {showUpgradeBadge && (
+                    <span className='rounded-full bg-[var(--glass-tone-warning-bg)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--glass-tone-warning-fg)]'>
+                      {tm('navUpgradeBadge')}
+                    </span>
+                  )}
+                  {showRenewalBadge && (
+                    <span
+                      className='rounded-full bg-[var(--glass-tone-warning-bg)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--glass-tone-warning-fg)]'
+                      title={tm('renewReminderTitle', { days: membership.reminderDays })}
+                    >
+                      {tm('navRenewBadge', { days: membership.daysRemaining ?? 0 })}
+                    </span>
+                  )}
+                </Link>
                 <Link
                   href={{ pathname: '/profile' }}
                   className='text-sm text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)] font-medium transition-colors flex items-center gap-1'

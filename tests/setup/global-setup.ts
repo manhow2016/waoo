@@ -93,6 +93,15 @@ export default async function globalSetup() {
     stdio: 'inherit',
   })
 
+  // 会员系统基础数据（默认供应商 + 套餐）。
+  // 任务入队与供应商密钥解析都会校验会员准入，测试库必须与真实部署一样完成初始化，
+  // 否则「未配置默认供应商」会让所有提交任务的用例失败。
+  execSync('npx tsx prisma/seed.ts', {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+    env: { ...process.env, SEED_SKIP_ADMIN: '1' },
+  })
+
   return async () => {
     await runGlobalTeardown()
   }

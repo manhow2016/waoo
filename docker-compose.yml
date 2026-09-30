@@ -91,6 +91,9 @@ services:
       CRON_SECRET: "waoowaoo-docker-cron-secret"
       INTERNAL_TASK_TOKEN: "waoowaoo-docker-task-token"
       API_ENCRYPTION_KEY: "waoowaoo-opensource-fixed-key-2026"
+      # 管理后台独立会话签名密钥（与 NEXTAUTH_SECRET / API_ENCRYPTION_KEY 隔离）
+      # 生产部署请替换为随机值：openssl rand -base64 32
+      ADMIN_SESSION_SECRET: "waoowaoo-docker-admin-session-secret"
       # Worker 配置
       WATCHDOG_INTERVAL_MS: "30000"
       TASK_HEARTBEAT_TIMEOUT_MS: "90000"
@@ -132,6 +135,7 @@ services:
     command: >
       sh -c "
         npx prisma db push --skip-generate &&
+        npx prisma db seed &&
         (sleep 5 && echo '' &&
         echo '╔══════════════════════════════════════════════════╗' &&
         echo '║            waoowaoo is ready!                    ║' &&

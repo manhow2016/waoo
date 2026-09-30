@@ -1,11 +1,21 @@
 import 'dotenv/config'
+import type { Worker } from 'bullmq'
 import { logInfo as _ulogInfo, logError as _ulogError } from '@/lib/logging/core'
 import { createImageWorker } from './image.worker'
 import { createVideoWorker } from './video.worker'
 import { createVoiceWorker } from './voice.worker'
 import { createTextWorker } from './text.worker'
+import { createMembershipWorker } from './membership.worker'
 
-const workers = [createImageWorker(), createVideoWorker(), createVoiceWorker(), createTextWorker()]
+// 各 worker 的 job data 类型不同，这里统一按 Worker 处理；
+// 失败日志里的 taskId/taskType 仅用于观测，缺失时留空。
+const workers: Worker[] = [
+  createImageWorker(),
+  createVideoWorker(),
+  createVoiceWorker(),
+  createTextWorker(),
+  createMembershipWorker(),
+]
 
 _ulogInfo('[Workers] started:', workers.length)
 
